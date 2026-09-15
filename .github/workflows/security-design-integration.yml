@@ -1,0 +1,25 @@
+name: Security Design Integration
+
+on:
+  push:
+    branches: [main, 'integrate/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration-test:
+    name: Design-by-Security ↔ Security Copilot v4
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate skill archive and integration contract
+        run: bash tests/security-design-pipeline/run-pipeline.sh
+
+      - name: Validate builder
+        run: bash -n build-security-copilot.sh
