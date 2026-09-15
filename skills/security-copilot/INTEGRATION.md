@@ -172,8 +172,8 @@ DESIGN -> BUILD -> DEPLOY -> DETECT -> RESPOND -> LEARN -> REDESIGN
 ## Related Documentation
 
 - [**DESIGN-BY-SECURITY-ADAPTER.md**](./DESIGN-BY-SECURITY-ADAPTER.md) — Executable hand-off contract and schema definitions
+- [**Security Copilot v4 Documentation**](./security-copilot_v4.skill) — Operational playbooks, detection engineering, and SOC workflows
 - [**Threat Modeling Framework**](../../docs/threat-modeling.md) — Attack path and abuse case methodology
-- **Security Copilot v4 Documentation** — Operational playbooks and detection engineering
 - [**Control Validation Framework**](../../docs/control-validation.md) — How to measure control effectiveness
 
 ## FAQ
