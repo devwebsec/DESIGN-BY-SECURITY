@@ -12,11 +12,13 @@ good() { printf 'PASS  %s\n' "$1"; pass=$((pass+1)); }
 bad() { printf 'FAIL  %s\n' "$1"; fail=$((fail+1)); }
 
 check_file() {
-  [[ -f "$1" ]] && good "${1#$ROOT/}" || bad "${1#$ROOT/}"
+  local f="$1"
+  [[ -f "$f" ]] && good "${f#$ROOT/}" || bad "${f#$ROOT/}"
 }
 
 check_contains() {
-  local f="$1" pattern="$2" label="${3:-${f#$ROOT/} contains [$pattern]}"
+  local f="$1" pattern="$2" label
+  label="${3:-${1#$ROOT/} contains [$2]}"
   if grep -Fq "$pattern" "$f"; then good "$label"; else bad "$label"; fi
 }
 
@@ -38,18 +40,13 @@ run_tc() {
       ok=0
     fi
   done
-  if (( ok )); then
-    printf 'TC RESULT: %s PASS\n' "$id"
-  else
-    printf 'TC RESULT: %s FAIL\n' "$id"
-  fi
+  if (( ok )); then printf 'TC RESULT: %s PASS\n' "$id"; else printf 'TC RESULT: %s FAIL\n' "$id"; fi
 }
 
 printf '%s\n' '=== Security Design Pipeline Integration Test ==='
 printf '%s\n' 'Repository contract: Design-by-Security ↔ Security Copilot v4'
 printf '%s\n' ''
 
-# Structural contract
 check_file "$ROOT/design-by-security/DESIGN-BY-SECURITY-PROMPT.md"
 check_file "$ROOT/design-by-security/DESIGN-BY-SECURITY-ADAPTER.md"
 check_file "$ROOT/skills/security-copilot/security-copilot_v4.skill"
@@ -59,16 +56,12 @@ check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-PROMPT.md" 'DESIGN �
 check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-ADAPTER.md" 'Security Copilot'
 check_contains "$ROOT/skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md" 'Detection-by-Design'
 
-# Scenario contracts: each TC gets an independent PASS/FAIL result.
 run_tc 'TC-001' "$TEST_DIR/TC-001-web-api.md" \
   'Trust boundaries' 'Attack surface' 'Critical attack path' 'Expected requirements' 'Expected controls' 'Security Copilot handoff'
-
 run_tc 'TC-002' "$TEST_DIR/TC-002-identity-compromise.md" \
   'WHO→FROM WHERE→IDENTITY→RESOURCE→WHEN→PRIVILEGE→PURPOSE' 'blast radius' 'LATERAL MOVEMENT' 'Expected controls' 'Destructive actions require human approval' 'Security Copilot handoff'
-
 run_tc 'TC-003' "$TEST_DIR/TC-003-supply-chain.md" \
   'SOURCE CODE → DEPENDENCIES → DEVELOPER → CI/CD → BUILD RUNNER → ARTIFACT → REGISTRY → DEPLOYMENT' 'malicious dependency' 'SBOM' 'provenance' 'artifact integrity/signing' 'Security Copilot handoff'
-
 run_tc 'TC-004' "$TEST_DIR/TC-004-soc-feedback.md" \
   'DETECTION → TRIAGE → VALIDATION → CONTAINMENT → ROOT CAUSE → SECURITY DEBT → REQUIREMENT/CONTROL CHANGE → VALIDATION → REDESIGN' 'root cause' 'security debt item' 'residual risk' 'redesign decision' 'Security Copilot handoff'
 
@@ -80,8 +73,5 @@ else
 fi
 
 printf '\nRESULT: %d passed, %d failed\n' "$pass" "$fail"
-if (( fail > 0 )); then
-  printf '%s\n' 'PIPELINE INTEGRATION: FAIL'
-  exit 1
-fi
+if (( fail > 0 )); then printf '%s\n' 'PIPELINE INTEGRATION: FAIL'; exit 1; fi
 printf '%s\n' 'PIPELINE INTEGRATION: PASS'
