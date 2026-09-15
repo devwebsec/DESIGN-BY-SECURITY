@@ -48,6 +48,9 @@ Security Copilot v4 owns operational workflows such as SOC triage, incident
 response, DFIR, threat hunting, detection engineering, IOC/CTI analysis,
 malware analysis and specialized playbooks.
 
+The executable hand-off contract is documented in
+`skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md`.
+
 ## Integration contract
 
 A design task must progress through:
