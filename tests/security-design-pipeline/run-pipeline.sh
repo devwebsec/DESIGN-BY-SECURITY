@@ -8,26 +8,40 @@ SKILL_ARCHIVE="$ROOT/skills/security-copilot/security-copilot_v4.skill"
 pass=0
 fail=0
 
+good() { printf 'PASS  %s\n' "$1"; pass=$((pass+1)); }
+bad() { printf 'FAIL  %s\n' "$1"; fail=$((fail+1)); }
+
 check_file() {
-  local f="$1"
-  if [[ -f "$f" ]]; then
-    printf 'PASS  %s\n' "${f#$ROOT/}"
-    pass=$((pass+1))
-  else
-    printf 'FAIL  %s\n' "${f#$ROOT/}"
-    fail=$((fail+1))
-  fi
+  [[ -f "$1" ]] && good "${1#$ROOT/}" || bad "${1#$ROOT/}"
 }
 
 check_contains() {
-  local f="$1"; shift
-  local pattern="$1"
-  if grep -Fq "$pattern" "$f"; then
-    printf 'PASS  %s contains [%s]\n' "${f#$ROOT/}" "$pattern"
-    pass=$((pass+1))
+  local f="$1" pattern="$2" label="${3:-${f#$ROOT/} contains [$pattern]}"
+  if grep -Fq "$pattern" "$f"; then good "$label"; else bad "$label"; fi
+}
+
+run_tc() {
+  local id="$1" file="$2"; shift 2
+  local ok=1 pattern
+  printf '\n--- %s ---\n' "$id"
+  if [[ ! -f "$file" ]]; then
+    bad "$id scenario file"
+    printf 'TC RESULT: %s FAIL\n' "$id"
+    return
+  fi
+  good "$id scenario file"
+  for pattern in "$@"; do
+    if grep -Fq "$pattern" "$file"; then
+      good "$id: [$pattern]"
+    else
+      bad "$id: missing [$pattern]"
+      ok=0
+    fi
+  done
+  if (( ok )); then
+    printf 'TC RESULT: %s PASS\n' "$id"
   else
-    printf 'FAIL  %s missing [%s]\n' "${f#$ROOT/}" "$pattern"
-    fail=$((fail+1))
+    printf 'TC RESULT: %s FAIL\n' "$id"
   fi
 }
 
@@ -35,34 +49,39 @@ printf '%s\n' '=== Security Design Pipeline Integration Test ==='
 printf '%s\n' 'Repository contract: Design-by-Security ↔ Security Copilot v4'
 printf '%s\n' ''
 
+# Structural contract
 check_file "$ROOT/design-by-security/DESIGN-BY-SECURITY-PROMPT.md"
 check_file "$ROOT/design-by-security/DESIGN-BY-SECURITY-ADAPTER.md"
 check_file "$ROOT/skills/security-copilot/security-copilot_v4.skill"
 check_file "$ROOT/skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md"
 check_file "$ROOT/build-security-copilot.sh"
-
-for tc in TC-001-web-api.md TC-002-identity-compromise.md TC-003-supply-chain.md TC-004-soc-feedback.md; do
-  check_file "$TEST_DIR/$tc"
-done
-
-if [[ -f "$SKILL_ARCHIVE" ]] && unzip -t "$SKILL_ARCHIVE" >/dev/null 2>&1; then
-  printf 'PASS  security-copilot_v4.skill archive integrity\n'
-  pass=$((pass+1))
-else
-  printf 'FAIL  security-copilot_v4.skill archive integrity\n'
-  fail=$((fail+1))
-fi
-
 check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-PROMPT.md" 'DESIGN → BUILD → DEPLOY → DETECT → RESPOND → LEARN → REDESIGN'
 check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-ADAPTER.md" 'Security Copilot'
 check_contains "$ROOT/skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md" 'Detection-by-Design'
-check_contains "$TEST_DIR/TC-004-soc-feedback.md" 'SECURITY DEBT'
 
-printf '%s\n' ''
-printf 'RESULT: %d passed, %d failed\n' "$pass" "$fail"
+# Scenario contracts: each TC gets an independent PASS/FAIL result.
+run_tc 'TC-001' "$TEST_DIR/TC-001-web-api.md" \
+  'Trust boundaries' 'Attack surface' 'Critical attack path' 'Expected requirements' 'Expected controls' 'Security Copilot handoff'
 
-if (( fail > 0 )); then
-  exit 1
+run_tc 'TC-002' "$TEST_DIR/TC-002-identity-compromise.md" \
+  'WHO→FROM WHERE→IDENTITY→RESOURCE→WHEN→PRIVILEGE→PURPOSE' 'blast radius' 'LATERAL MOVEMENT' 'Expected controls' 'Destructive actions require human approval' 'Security Copilot handoff'
+
+run_tc 'TC-003' "$TEST_DIR/TC-003-supply-chain.md" \
+  'SOURCE CODE → DEPENDENCIES → DEVELOPER → CI/CD → BUILD RUNNER → ARTIFACT → REGISTRY → DEPLOYMENT' 'malicious dependency' 'SBOM' 'provenance' 'artifact integrity/signing' 'Security Copilot handoff'
+
+run_tc 'TC-004' "$TEST_DIR/TC-004-soc-feedback.md" \
+  'DETECTION → TRIAGE → VALIDATION → CONTAINMENT → ROOT CAUSE → SECURITY DEBT → REQUIREMENT/CONTROL CHANGE → VALIDATION → REDESIGN' 'root cause' 'security debt item' 'residual risk' 'redesign decision' 'Security Copilot handoff'
+
+printf '\n--- Packaging gate ---\n'
+if [[ -f "$SKILL_ARCHIVE" ]] && unzip -t "$SKILL_ARCHIVE" >/dev/null 2>&1; then
+  good 'security-copilot_v4.skill archive integrity'
+else
+  bad 'security-copilot_v4.skill archive integrity (blocking integration gate)'
 fi
 
+printf '\nRESULT: %d passed, %d failed\n' "$pass" "$fail"
+if (( fail > 0 )); then
+  printf '%s\n' 'PIPELINE INTEGRATION: FAIL'
+  exit 1
+fi
 printf '%s\n' 'PIPELINE INTEGRATION: PASS'
