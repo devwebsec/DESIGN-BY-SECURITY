@@ -2,7 +2,7 @@ name: Security Design Integration
 
 on:
   push:
-    branches: [main, 'integrate/**']
+    branches: [main, 'integrate/**', 'hardening/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Validate skill archive and integration contract
+      - name: Validate skill archive, contracts and scenarios
         run: bash tests/security-design-pipeline/run-pipeline.sh
 
-      - name: Validate builder
+      - name: Validate builder syntax
         run: bash -n build-security-copilot.sh
