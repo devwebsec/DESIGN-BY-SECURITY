@@ -55,6 +55,17 @@ def evaluate(path: Path) -> None:
     lessons = ids(d["lessons_learned"], "lessons_learned")
     redesign = ids(d["redesign"], "redesign")
 
+    # ─── [FIX v2] Learning-cycle balance ────────────────────────────
+    # Контракт: Learn (lessons_learned) и Redesign (redesign) образуют
+    # замкнутый цикл. Если хоть один из них пуст, а другой — нет,
+    # цикл разорван, даже если все ссылки формально валидны.
+    if bool(lessons) != bool(redesign):
+        fail(
+            "learning_redesign_imbalance: lessons_learned and redesign "
+            "must be both empty or both populated"
+        )
+    # ────────────────────────────────────────────────────────────────
+
     for t in threats.values():
         refs(t.get("asset_ids", []), assets, f"threat {t['id']} asset_ids")
         if str(t.get("severity", "")).lower() == "critical":
@@ -165,6 +176,7 @@ def main() -> int:
             print(f"FAIL  negative: {path.name}: unexpectedly accepted")
     print(f"SEMANTIC RESULT: {1 + failed_as_expected} passed, {len(negatives) - failed_as_expected} failed")
     return 0 if failed_as_expected == len(negatives) else 1
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
