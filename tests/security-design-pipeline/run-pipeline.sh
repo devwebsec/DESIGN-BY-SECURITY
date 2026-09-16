@@ -6,6 +6,9 @@ TEST_DIR="$ROOT/tests/security-design-pipeline"
 SKILL_ARCHIVE="$ROOT/skills/security-copilot/security-copilot_v4.skill"
 MANIFEST="$TEST_DIR/pipeline-manifest.yml"
 FIXTURE="$TEST_DIR/fixtures/expected-artifact-contract.md"
+SEMANTIC_EVAL="$TEST_DIR/semantic/evaluate.py"
+SEMANTIC_VALID="$TEST_DIR/semantic/fixtures/valid-web-api.json"
+SEMANTIC_NEGATIVE="$TEST_DIR/semantic/fixtures/negative"
 
 pass=0
 fail=0
@@ -61,6 +64,9 @@ check_file "$ROOT/skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md"
 check_file "$ROOT/build-security-copilot.sh"
 check_file "$MANIFEST"
 check_file "$FIXTURE"
+check_file "$SEMANTIC_EVAL"
+check_file "$SEMANTIC_VALID"
+check_file "$SEMANTIC_NEGATIVE"
 check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-PROMPT.md" 'DESIGN → BUILD → DEPLOY → DETECT → RESPOND → LEARN → REDESIGN'
 check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-ADAPTER.md" 'Security Copilot'
 check_contains "$ROOT/skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md" 'Detection-by-Design'
@@ -84,6 +90,14 @@ run_tc 'TC-003' "$TEST_DIR/TC-003-supply-chain.md" \
   'SOURCE CODE → DEPENDENCIES → DEVELOPER → CI/CD → BUILD RUNNER → ARTIFACT → REGISTRY → DEPLOYMENT' 'malicious dependency' 'SBOM' 'provenance' 'artifact integrity/signing' 'Security Copilot handoff'
 run_tc 'TC-004' "$TEST_DIR/TC-004-soc-feedback.md" \
   'DETECTION → TRIAGE → VALIDATION → CONTAINMENT → ROOT CAUSE → SECURITY DEBT → REQUIREMENT/CONTROL CHANGE → VALIDATION → REDESIGN' 'root cause' 'security debt item' 'residual risk' 'redesign decision' 'Security Copilot handoff'
+
+printf '\n--- Level 4/5 semantic security design evaluation ---\n'
+if python3 "$SEMANTIC_EVAL" "$SEMANTIC_VALID" "$SEMANTIC_NEGATIVE"; then
+  good 'Level 4 semantic relationship validation'
+  good 'Level 5 adversarial negative-fixture validation'
+else
+  bad 'Level 4/5 semantic security design evaluation'
+fi
 
 printf '\n--- Packaging / builder gate ---\n'
 if [[ -f "$SKILL_ARCHIVE" ]] && unzip -t "$SKILL_ARCHIVE" >/dev/null 2>&1; then
