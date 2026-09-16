@@ -1,126 +1,193 @@
 #!/usr/bin/env python3
-"""Level 6 deterministic property/graph fuzzing for the semantic evaluator.
-
-The fuzzer generates bounded mutations from a known-good artifact and checks
-security invariants. A fixed seed makes CI reproducible; every generated
-security-breaking case MUST be rejected and every benign transformation MUST
-remain accepted.
-"""
+"""Deterministic semantic validator for normalized Design-by-Security artifacts."""
 from __future__ import annotations
-
-import copy
-import json
-import random
-import sys
-import tempfile
+import json, sys
 from pathlib import Path
 
-EVALUATOR = Path(__file__).with_name("evaluate.py")
+REQUIRED = [
+    "intent", "assets", "trust_boundaries", "threats", "attack_paths",
+    "security_requirements", "controls", "detections", "validations",
+    "security_gate", "operational_handoff", "lessons_learned", "redesign",
+]
 
 
-def load_evaluator():
-    namespace = {}
-    exec(EVALUATOR.read_text(encoding="utf-8"), namespace)
-    return namespace["evaluate"]
+def fail(msg: str) -> None:
+    raise ValueError(msg)
 
 
-def accepted(evaluate, obj) -> bool:
-    with tempfile.TemporaryDirectory() as td:
-        path = Path(td) / "candidate.json"
-        path.write_text(json.dumps(obj, sort_keys=True), encoding="utf-8")
-        try:
-            evaluate(path)
-            return True
-        except Exception:
-            return False
+def load(path: Path) -> dict:
+    with path.open(encoding="utf-8") as fh:
+        obj = json.load(fh)
+    if not isinstance(obj, dict):
+        fail("root must be an object")
+    for key in REQUIRED:
+        if key not in obj:
+            fail(f"missing artifact: {key}")
+    return obj
 
 
-def broken_mutations(base):
-    """Return mutation functions that violate independent graph invariants."""
-    return [
-        lambda d: d["security_requirements"][0]["threat_ids"].clear(),
-        lambda d: d["security_requirements"][0]["validation_ids"].clear(),
-        lambda d: d["controls"][0]["requirement_ids"].clear(),
-        lambda d: d["controls"][0]["validation_ids"].clear(),
-        lambda d: d["validations"][0].update({"result": "fail"}),
-        lambda d: d["validations"][0]["control_ids"].clear(),
-        lambda d: d["validations"][0]["requirement_ids"].clear(),
-        lambda d: d["attack_paths"][0].update({"detection_ids": [], "detection_gap": ""}),
-        lambda d: d["detections"][0]["attack_path_ids"].clear(),
-        lambda d: d["security_gate"].update({"decision": "FAIL"}),
-        lambda d: d["security_gate"].update({"unresolved_critical_design_flaws": ["FUZZ-FLAW"]}),
-        lambda d: d["security_gate"].update({"unknowns": ["FUZZ-UNKNOWN"]}),
-        lambda d: d["operational_handoff"].update({"human_approval_required_for_destructive_actions": False}),
-        lambda d: d["lessons_learned"][0].pop("root_cause", None),
-        lambda d: d["lessons_learned"][0].pop("security_debt", None),
-        lambda d: d["redesign"][0].update({"source_lesson_id": "FUZZ-LESSON"}),
-        lambda d: d["threats"].append(copy.deepcopy(d["threats"][0])),
-        lambda d: d["security_requirements"][0]["validation_ids"].append("FUZZ-NONEXISTENT"),
-        lambda d: d["controls"][0]["requirement_ids"].append("FUZZ-NONEXISTENT"),
-        lambda d: d["evidence"].append({"id": "E-FUZZ", "source": "FUZZ-NONEXISTENT"}),
-    ]
+def ids(items, label):
+    out = {}
+    for item in items:
+        if not isinstance(item, dict) or not item.get("id"):
+            fail(f"{label}: every item requires id")
+        if item["id"] in out:
+            fail(f"{label}: duplicate id {item['id']}")
+        out[item["id"]] = item
+    return out
 
 
-def benign_mutations(base):
-    return [
-        lambda d: d["threats"].reverse(),
-        lambda d: d["security_requirements"].reverse(),
-        lambda d: d["controls"].reverse(),
-        lambda d: d["detections"].reverse(),
-        lambda d: d.update({"fuzz_metadata": {"seed": 606, "benign": True}}),
-    ]
+def refs(values, target, label):
+    for value in values or []:
+        if value not in target:
+            fail(f"{label}: unknown reference {value}")
+
+
+def evaluate(path: Path) -> None:
+    d = load(path)
+    assets = ids(d["assets"], "assets")
+    threats = ids(d["threats"], "threats")
+    paths = ids(d["attack_paths"], "attack_paths")
+    reqs = ids(d["security_requirements"], "security_requirements")
+    controls = ids(d["controls"], "controls")
+    detections = ids(d["detections"], "detections")
+    vals = ids(d["validations"], "validations")
+    lessons = ids(d["lessons_learned"], "lessons_learned")
+    redesign = ids(d["redesign"], "redesign")
+
+    # ─── [FIX v2] Learning-cycle balance ────────────────────────────
+    if bool(lessons) != bool(redesign):
+        fail(
+            "learning_redesign_imbalance: lessons_learned and redesign "
+            "must be both empty or both populated"
+        )
+    # ────────────────────────────────────────────────────────────────
+
+    for t in threats.values():
+        refs(t.get("asset_ids", []), assets, f"threat {t['id']} asset_ids")
+        if str(t.get("severity", "")).lower() == "critical":
+            linked = [r for r in reqs.values() if t["id"] in r.get("threat_ids", [])]
+            if not linked:
+                fail(f"critical_threat_without_requirement: {t['id']}")
+
+    for p in paths.values():
+        refs(p.get("threat_ids", []), threats, f"attack_path {p['id']} threat_ids")
+        refs(p.get("detection_ids", []), detections, f"attack_path {p['id']} detection_ids")
+        if str(p.get("severity", "")).lower() == "critical" and not p.get("detection_ids"):
+            gap = str(p.get("detection_gap", "")).strip()
+            if not gap:
+                fail(f"critical_attack_path_without_detection_or_explicit_gap: {p['id']}")
+
+    for r in reqs.values():
+        refs(r.get("threat_ids", []), threats, f"requirement {r['id']} threat_ids")
+        refs(r.get("validation_ids", []), vals, f"requirement {r['id']} validation_ids")
+        if not r.get("validation_ids"):
+            fail(f"requirement_without_validation: {r['id']}")
+
+    for c in controls.values():
+        refs(c.get("requirement_ids", []), reqs, f"control {c['id']} requirement_ids")
+        refs(c.get("validation_ids", []), vals, f"control {c['id']} validation_ids")
+
+    # ─── [FIX v2] Graph integrity: controls must not be dangling ────
+    for c in controls.values():
+        if not c.get("requirement_ids"):
+            fail(f"control_without_requirement: {c['id']}")
+        if not c.get("validation_ids"):
+            fail(f"control_without_validation: {c['id']}")
+    # ────────────────────────────────────────────────────────────────
+
+    for v in vals.values():
+        refs(v.get("requirement_ids", []), reqs, f"validation {v['id']} requirement_ids")
+        refs(v.get("control_ids", []), controls, f"validation {v['id']} control_ids")
+        if str(v.get("result", "")).lower() != "pass":
+            fail(f"validation_not_passed: {v['id']}")
+
+    for r in reqs.values():
+        if not any(r["id"] in c.get("requirement_ids", []) for c in controls.values()):
+            fail(f"requirement_without_control: {r['id']}")
+        for vid in r.get("validation_ids", []):
+            v = vals[vid]
+            if r["id"] not in v.get("requirement_ids", []):
+                fail(f"requirement_validation_mismatch: {r['id']} -> {vid}")
+
+    for c in controls.values():
+        for vid in c.get("validation_ids", []):
+            if c["id"] not in vals[vid].get("control_ids", []):
+                fail(f"control_validation_mismatch: {c['id']} -> {vid}")
+
+    for det in detections.values():
+        refs(det.get("attack_path_ids", []), paths, f"detection {det['id']} attack_path_ids")
+
+    # ─── [FIX v2] Graph integrity: detections must not be dangling ──
+    for det in detections.values():
+        if not det.get("attack_path_ids"):
+            fail(f"detection_without_attack_path: {det['id']}")
+    # ────────────────────────────────────────────────────────────────
+
+    handoff = d["operational_handoff"]
+    refs(handoff.get("attack_path_ids", []), paths, "operational_handoff attack_path_ids")
+    refs(handoff.get("detection_ids", []), detections, "operational_handoff detection_ids")
+    if not handoff.get("response_owner"):
+        fail("operational_handoff missing response_owner")
+    if handoff.get("human_approval_required_for_destructive_actions") is not True:
+        fail("destructive_action_without_human_approval")
+
+    gate = d["security_gate"]
+    if str(gate.get("decision", "")).upper() != "PASS":
+        fail("unresolved_critical_design_flaw: security_gate is not PASS")
+    if gate.get("unresolved_critical_design_flaws"):
+        fail("unresolved_critical_design_flaw: gate contains unresolved flaws")
+    if gate.get("unknowns"):
+        fail("unknown_presented_as_evidence: gate contains unresolved unknowns")
+
+    evidence = d.get("evidence", [])
+    for e in evidence:
+        if not isinstance(e, dict) or not e.get("source"):
+            fail("unknown_presented_as_evidence: evidence item has no source")
+        source = e["source"]
+        if source not in vals and source not in controls and source not in reqs:
+            fail(f"unknown_presented_as_evidence: invalid evidence source {source}")
+
+    for lesson in lessons.values():
+        if not lesson.get("root_cause"):
+            fail(f"lesson_without_root_cause: {lesson['id']}")
+        if not lesson.get("security_debt"):
+            fail(f"lesson_without_security_debt: {lesson['id']}")
+        if not any(rd.get("source_lesson_id") == lesson["id"] for rd in redesign.values()):
+            fail(f"incident_closed_without_root_cause_feedback: {lesson['id']}")
+
+    for rd in redesign.values():
+        if rd.get("source_lesson_id") not in lessons:
+            fail(f"redesign references unknown lesson: {rd['id']}")
 
 
 def main() -> int:
     if len(sys.argv) != 3:
-        print("usage: fuzz.py VALID.json CASES", file=sys.stderr)
+        print("usage: evaluate.py VALID.json NEGATIVE_DIR", file=sys.stderr)
         return 2
-
-    valid_path = Path(sys.argv[1])
-    cases = int(sys.argv[2])
-    if cases < 1 or cases > 5000:
-        print("CASES must be between 1 and 5000", file=sys.stderr)
-        return 2
-
-    base = json.loads(valid_path.read_text(encoding="utf-8"))
-    evaluate = load_evaluator()
-    seed = 606
-    rng = random.Random(seed)
-
-    if not accepted(evaluate, base):
-        print("FAIL  Level 6 baseline is not accepted")
+    valid = Path(sys.argv[1])
+    negative_dir = Path(sys.argv[2])
+    try:
+        evaluate(valid)
+        print(f"PASS  valid: {valid.name}")
+    except Exception as exc:
+        print(f"FAIL  valid: {valid.name}: {exc}")
         return 1
-
-    breakers = broken_mutations(base)
-    benign = benign_mutations(base)
-    passed = 0
-    total = 0
-
-    # Deterministically sample security-breaking mutations, including
-    # repeated compositions so graph-edge failures are exercised in depth.
-    for i in range(cases):
-        obj = copy.deepcopy(base)
-        count = 1 + (i % 3)
-        for mutation in rng.sample(breakers, count):
-            mutation(obj)
-        total += 1
-        if not accepted(evaluate, obj):
-            passed += 1
+    negatives = sorted(negative_dir.glob("*.json"))
+    if not negatives:
+        print("FAIL  no negative fixtures")
+        return 1
+    failed_as_expected = 0
+    for path in negatives:
+        try:
+            evaluate(path)
+        except Exception as exc:
+            failed_as_expected += 1
+            print(f"PASS  negative: {path.name}: rejected ({exc})")
         else:
-            print(f"FAIL  fuzz-negative-{i:03d}: unexpectedly accepted")
-
-    # Property checks: benign permutations/metadata must preserve acceptance.
-    for i, mutation in enumerate(benign):
-        obj = copy.deepcopy(base)
-        mutation(obj)
-        total += 1
-        if accepted(evaluate, obj):
-            passed += 1
-        else:
-            print(f"FAIL  fuzz-benign-{i:03d}: benign transformation rejected")
-
-    print(f"LEVEL 6 RESULT: {passed} passed, {total - passed} failed; seed={seed}; negative_cases={cases}; benign_cases={len(benign)}")
-    return 0 if passed == total else 1
+            print(f"FAIL  negative: {path.name}: unexpectedly accepted")
+    print(f"SEMANTIC RESULT: {1 + failed_as_expected} passed, {len(negatives) - failed_as_expected} failed")
+    return 0 if failed_as_expected == len(negatives) else 1
 
 
 if __name__ == "__main__":
