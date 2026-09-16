@@ -42,7 +42,7 @@ def broken_mutations(base):
         lambda d: d["security_requirements"][0]["validation_ids"].clear(),
         lambda d: d["controls"][0]["requirement_ids"].clear(),
         lambda d: d["controls"][0]["validation_ids"].clear(),
-        lambda d: d["validations"][0]["result"].__class__ and d["validations"][0].update({"result": "fail"}),
+        lambda d: d["validations"][0].update({"result": "fail"}),
         lambda d: d["validations"][0]["control_ids"].clear(),
         lambda d: d["validations"][0]["requirement_ids"].clear(),
         lambda d: d["attack_paths"][0].update({"detection_ids": [], "detection_gap": ""}),
@@ -78,6 +78,10 @@ def main() -> int:
 
     valid_path = Path(sys.argv[1])
     cases = int(sys.argv[2])
+    if cases < 1 or cases > 5000:
+        print("CASES must be between 1 and 5000", file=sys.stderr)
+        return 2
+
     base = json.loads(valid_path.read_text(encoding="utf-8"))
     evaluate = load_evaluator()
     seed = 606
