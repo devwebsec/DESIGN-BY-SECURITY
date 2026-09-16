@@ -57,29 +57,28 @@ Security Copilot v4 remains the authoritative operational security skill.
 
 ## Hand-off Contract
 
-The precise executable contract between these systems is formally defined in
-[`DESIGN-BY-SECURITY-ADAPTER.md`](./DESIGN-BY-SECURITY-ADAPTER.md).
+The executable contract between these systems is defined in:
 
-Refer to the adapter contract for:
-- Input/output schemas at each integration boundary
-- Validation rules for design-to-operations handoff
-- Data structures for operational findings feedback
-- Stage-specific acceptance criteria
-- Error handling and escalation procedures
+- `design-by-security/DESIGN-BY-SECURITY-ADAPTER.md`
+- `skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md`
+
+The integration tests validate the required artifact and hard-fail contract in
+`tests/security-design-pipeline/pipeline-manifest.yml` and
+`tests/security-design-pipeline/fixtures/expected-artifact-contract.md`.
 
 ## Integration contract
 
 A design task must progress through:
 
-```
-BUSINESS -> ASSETS -> ARCHITECTURE -> TRUST -> THREATS -> ATTACK PATHS 
+```text
+BUSINESS -> ASSETS -> ARCHITECTURE -> TRUST -> THREATS -> ATTACK PATHS
     -> REQUIREMENTS -> CONTROLS -> VALIDATION -> GATE
 ```
 
 An operational finding must be able to feed back into design through:
 
-```
-FINDING -> ROOT CAUSE -> SECURITY DEBT -> REQUIREMENT/CONTROL 
+```text
+FINDING -> ROOT CAUSE -> SECURITY DEBT -> REQUIREMENT/CONTROL
     -> VALIDATION -> REDESIGN
 ```
 
@@ -96,7 +95,7 @@ requirement and control have been established.**
 - Vendor lock-in without business justification
 - Difficulty validating control effectiveness
 
-**Correct decision order**: Objective → Threat → Requirement → Control → Product
+**Correct decision order**: Objective -> Threat -> Requirement -> Control -> Product
 
 ### Composition Over Duplication
 
@@ -105,7 +104,7 @@ Design-by-Security prompt.** The integration is compositional:
 
 - **Design-by-Security** focuses on *architecture* and *requirements*.
 - **Security Copilot v4** focuses on *operational evidence* and *tactical response*.
-- Each system calls the other at well-defined boundaries (see adapter contract).
+- Each system calls the other at well-defined boundaries through the adapter contract.
 
 This separation allows each system to evolve independently and makes the integration
 testable, auditable, and maintainable.
@@ -124,7 +123,7 @@ At the GATE stage, verify before proceeding to BUILD/DEPLOY:
 
 ## Integrated Lifecycle
 
-```
+```text
 DESIGN -> BUILD -> DEPLOY -> DETECT -> RESPOND -> LEARN -> REDESIGN
 ```
 
@@ -171,10 +170,12 @@ DESIGN -> BUILD -> DEPLOY -> DETECT -> RESPOND -> LEARN -> REDESIGN
 
 ## Related Documentation
 
-- [**DESIGN-BY-SECURITY-ADAPTER.md**](./DESIGN-BY-SECURITY-ADAPTER.md) — Executable hand-off contract and schema definitions
-- [**Security Copilot v4 Documentation**](./security-copilot_v4.skill) — Operational playbooks, detection engineering, and SOC workflows
-- [**Threat Modeling Framework**](../../docs/threat-modeling.md) — Attack path and abuse case methodology
-- [**Control Validation Framework**](../../docs/control-validation.md) — How to measure control effectiveness
+- `design-by-security/DESIGN-BY-SECURITY-ADAPTER.md` — executable hand-off contract
+- `skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md` — operational adapter and guardrails
+- `skills/security-copilot/security-copilot_v4.skill` — packaged operational skill
+- `tests/security-design-pipeline/TEST-PLAN.md` — integration test levels and exit criteria
+- `tests/security-design-pipeline/EXPECTED-RESULTS.md` — expected integration outcomes
+- `tests/security-design-pipeline/run-pipeline.sh` — executable integration checks
 
 ## FAQ
 
