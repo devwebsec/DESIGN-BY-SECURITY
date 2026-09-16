@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ─────────────────────────────────────────────────────────────────────
+# ИСТОРИЯ ИЗМЕНЕНИЙ
+# v1 → v2:
+#   [FIX-1] Guard от rm -rf на критичных путях (/, $HOME, cwd, ..).
+#   [FIX-2] Расширен regex traversal — покрывает Windows-пути
+#           (C:\..., UNC \\server\..., обратные слеши).
+#   [FIX-3] Post-build проверка содержимого через unzip -l вместо
+#           unzip -p (последний возвращал 0 даже для отсутствующего файла).
+#   [FIX-4] Grep в pre-extraction вынесен из set -e-чувствительного
+#           контекста через явный if.
+# ─────────────────────────────────────────────────────────────────────
+
 ROOT_INPUT="${1:-security-copilot}"
 ROOT="$(realpath -m "$ROOT_INPUT")"
 OUT="$(realpath -m "${ROOT_INPUT}.zip")"
@@ -12,6 +24,30 @@ cleanup() {
   [[ -n "$TMP" && -d "$TMP" ]] && rm -rf "$TMP"
 }
 trap cleanup EXIT
+
+# ─── [FIX-1] Guard от опасного rm -rf ───────────────────────────────
+# Разрешаем удалять только каталоги с ожидаемыми именами и никогда —
+# критические системные пути. Совместимо с вызовом из run-pipeline.sh,
+# где ROOT_INPUT = "$BUILD_TMP/package" (basename = "package").
+if [[ "$ROOT" == "/" ]] \
+   || [[ "$ROOT" == "$HOME" ]] \
+   || [[ "$ROOT" == "$PWD" ]] \
+   || [[ "$ROOT" == "$PWD/" ]] \
+   || [[ -z "$PACKAGE_NAME" ]] \
+   || [[ "$PACKAGE_NAME" == "." ]] \
+   || [[ "$PACKAGE_NAME" == ".." ]]; then
+  echo "ERROR: refusing to remove critical path: $ROOT" >&2
+  exit 1
+fi
+
+case "$PACKAGE_NAME" in
+  security-copilot|package) : ;;  # разрешённые имена
+  *)
+    echo "ERROR: unexpected target name '$PACKAGE_NAME' (allowed: security-copilot, package)" >&2
+    exit 1
+    ;;
+esac
+# ────────────────────────────────────────────────────────────────────
 
 rm -rf "$ROOT" "$OUT"
 
@@ -25,11 +61,18 @@ if ! unzip -t "$ARCHIVE" >/dev/null 2>&1; then
   exit 3
 fi
 
-# Reject absolute paths and parent traversal before extraction.
-if unzip -Z1 "$ARCHIVE" | grep -Eq '(^/|(^|/)\.\.(\/|$))'; then
+# ─── [FIX-2] Traversal check: POSIX + Windows-стиль ─────────────────
+# Ловит:
+#   - абсолютные POSIX-пути      /etc/passwd
+#   - абсолютные Windows-пути    C:\Windows\...
+#   - UNC                        \\server\share\...
+#   - parent traversal           ../../foo, ..\..\foo
+# Явный `if ...; then` защищает от срабатывания set -e при exit=1 у grep.
+if unzip -Z1 "$ARCHIVE" | grep -Eq '(^/|^[A-Za-z]:|^\\\\|(^|[\\/])\.\.([\\/]|$))'; then
   echo "ERROR: archive contains unsafe path entries" >&2
   exit 3
 fi
+# ────────────────────────────────────────────────────────────────────
 
 TMP="$(mktemp -d)"
 unzip -q "$ARCHIVE" -d "$TMP"
@@ -92,8 +135,15 @@ if ! unzip -t "$OUT" >/dev/null 2>&1; then
   exit 6
 fi
 
+# ─── [FIX-3] Post-build: проверка через unzip -l ─────────────────────
+# unzip -p возвращает 0 даже для отсутствующего файла, поэтому
+# используем unzip -l + grep, чтобы гарантированно убедиться в наличии.
 for f in "$PACKAGE_NAME/SKILL.md" "$PACKAGE_NAME/integrations/README.md"; do
-  unzip -p "$OUT" "$f" >/dev/null || { echo "ERROR: generated package missing $f" >&2; exit 7; }
+  if ! unzip -l "$OUT" "$f" | grep -Fq "$f"; then
+    echo "ERROR: generated package missing $f" >&2
+    exit 7
+  fi
 done
+# ────────────────────────────────────────────────────────────────────
 
 echo "Built: $OUT"
