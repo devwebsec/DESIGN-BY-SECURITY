@@ -8,6 +8,7 @@ MANIFEST="$TEST_DIR/pipeline-manifest.yml"
 FIXTURE="$TEST_DIR/fixtures/expected-artifact-contract.md"
 SEMANTIC_EVAL="$TEST_DIR/semantic/evaluate.py"
 MUTATION_EVAL="$TEST_DIR/semantic/mutate.py"
+FUZZ_EVAL="$TEST_DIR/semantic/fuzz.py"
 SEMANTIC_VALID="$TEST_DIR/semantic/fixtures/valid-web-api.json"
 SEMANTIC_NEGATIVE="$TEST_DIR/semantic/fixtures/negative"
 
@@ -67,6 +68,7 @@ check_file "$MANIFEST"
 check_file "$FIXTURE"
 check_file "$SEMANTIC_EVAL"
 check_file "$MUTATION_EVAL"
+check_file "$FUZZ_EVAL"
 check_file "$SEMANTIC_VALID"
 check_file "$SEMANTIC_NEGATIVE"
 check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-PROMPT.md" 'DESIGN → BUILD → DEPLOY → DETECT → RESPOND → LEARN → REDESIGN'
@@ -108,6 +110,13 @@ else
   bad 'Level 5+ mutation / metamorphic evaluation'
 fi
 
+printf '\n--- Level 6 property / graph fuzzing ---\n'
+if python3 "$FUZZ_EVAL" "$SEMANTIC_VALID" 100; then
+  good 'Level 6 bounded graph/property fuzzing'
+else
+  bad 'Level 6 bounded graph/property fuzzing'
+fi
+
 printf '\n--- Packaging / builder gate ---\n'
 if [[ -f "$SKILL_ARCHIVE" ]] && unzip -t "$SKILL_ARCHIVE" >/dev/null 2>&1; then
   good 'security-copilot_v4.skill archive integrity'
@@ -145,4 +154,4 @@ fi
 
 printf '\nRESULT: %d passed, %d failed\n' "$pass" "$fail"
 if (( fail > 0 )); then printf '%s\n' 'PIPELINE INTEGRATION: FAIL'; exit 1; fi
-printf '%s\n' 'PIPELINE INTEGRATION: PASS'
+printf '%s\n' 'PIPELINE INTEGRATION: PASS\n'
