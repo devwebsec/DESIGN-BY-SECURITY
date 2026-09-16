@@ -1,6 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ─────────────────────────────────────────────────────────────────────
+# ИСТОРИЯ ИЗМЕНЕНИЙ
+# v1 → v2:
+#   [FIX-1] Добавлена функция check_dir() для проверки директорий.
+#   [FIX-2] check_file "$SEMANTIC_NEGATIVE" → check_dir "$SEMANTIC_NEGATIVE"
+#           (SEMANTIC_NEGATIVE — директория, check_file использует -f и
+#            всегда возвращал FAIL, хотя evaluate.py обрабатывал её корректно).
+# ─────────────────────────────────────────────────────────────────────
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TEST_DIR="$ROOT/tests/security-design-pipeline"
 SKILL_ARCHIVE="$ROOT/skills/security-copilot/security-copilot_v4.skill"
@@ -26,6 +35,12 @@ bad() { printf 'FAIL  %s\n' "$1"; fail=$((fail+1)); }
 check_file() {
   local f="$1"
   [[ -f "$f" ]] && good "${f#$ROOT/}" || bad "${f#$ROOT/}"
+}
+
+# [FIX-1] Проверка директорий (для fixtures/negative).
+check_dir() {
+  local d="$1"
+  [[ -d "$d" ]] && good "${d#$ROOT/}" || bad "${d#$ROOT/}"
 }
 
 check_contains() {
@@ -70,7 +85,8 @@ check_file "$SEMANTIC_EVAL"
 check_file "$MUTATION_EVAL"
 check_file "$FUZZ_EVAL"
 check_file "$SEMANTIC_VALID"
-check_file "$SEMANTIC_NEGATIVE"
+# [FIX-2] SEMANTIC_NEGATIVE — директория, используем check_dir.
+check_dir  "$SEMANTIC_NEGATIVE"
 check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-PROMPT.md" 'DESIGN → BUILD → DEPLOY → DETECT → RESPOND → LEARN → REDESIGN'
 check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-ADAPTER.md" 'Security Copilot'
 check_contains "$ROOT/skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md" 'Detection-by-Design'
