@@ -1,50 +1,115 @@
 #!/usr/bin/env python3
-"""Convert the canonical normalized semantic artifact into the Level-7 graph."""
+"""Convert the canonical semantic artifact into the Level-7 security graph."""
 from __future__ import annotations
-import json,sys
+import json
+import sys
 from pathlib import Path
 
-def node(items, typ):
-    return [{"id":x["id"],"type":typ,**({"criticality":x.get("criticality")} if "criticality" in x else {}),**({"status":"PASS"} if typ=="validation" and str(x.get("result","")).lower()=="pass" else {})} for x in items]
 
-def main():
-    if len(sys.argv)!=3:
-        print("usage: from_semantic.py INPUT.json OUTPUT.json",file=sys.stderr); return 2
-    d=json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-    nodes=[]; edges=[]
-    nodes += node(d["assets"],"asset")
-    nodes += node(d["threats"],"threat")
-    nodes += node(d["attack_paths"],"attack_path")
-    nodes += node(d["security_requirements"],"requirement")
-    nodes += node(d["controls"],"control")
-    nodes += node(d["validations"],"validation")
-    nodes += node(d["detections"],"detection")
-    nodes += node(d["lessons_learned"],"root_cause")
-    nodes += node(d["redesign"],"redesign")
-    response_id="RESPONSE-001"
-    nodes.append({"id":response_id,"type":"response","destructive":True,"human_approval_required":d["operational_handoff"].get("human_approval_required_for_destructive_actions") is True})
-    def add(s,t): edges.append({"source":s,"target":t})
+def criticality(x: dict) -> str | None:
+    value = x.get("criticality", x.get("severity"))
+    if value is None:
+        return None
+    return str(value).upper()
+
+
+def node(items, typ):
+    result = []
+    for x in items:
+        n = {"id": x["id"], "type": typ}
+        c = criticality(x)
+        if c is not None:
+            n["criticality"] = c
+        if typ == "validation":
+            result_value = str(x.get("result", x.get("status", ""))).upper()
+            if result_value:
+                n["status"] = result_value
+        result.append(n)
+    return result
+
+
+def main() -> int:
+    if len(sys.argv) != 3:
+        print("usage: from_semantic.py INPUT.json OUTPUT.json", file=sys.stderr)
+        return 2
+
+    d = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    required = [
+        "assets", "threats", "attack_paths", "security_requirements",
+        "controls", "validations", "detections", "lessons_learned", "redesign",
+    ]
+    missing = [k for k in required if not isinstance(d.get(k), list)]
+    if missing:
+        print("missing canonical collections: " + ", ".join(missing), file=sys.stderr)
+        return 3
+
+    nodes = []
+    edges = []
+    for key, typ in [
+        ("assets", "asset"), ("threats", "threat"),
+        ("attack_paths", "attack_path"), ("security_requirements", "requirement"),
+        ("controls", "control"), ("validations", "validation"),
+        ("detections", "detection"), ("lessons_learned", "root_cause"),
+        ("redesign", "redesign"),
+    ]:
+        nodes += node(d[key], typ)
+
+    response_id = "RESPONSE-001"
+    handoff = d.get("operational_handoff", {})
+    nodes.append({
+        "id": response_id,
+        "type": "response",
+        "destructive": True,
+        "human_approval_required": handoff.get("human_approval_required_for_destructive_actions") is True,
+    })
+
+    def add(source, target):
+        edges.append({"source": source, "target": target})
+
     for x in d["threats"]:
-        for a in x.get("asset_ids",[]): add(a,x["id"])
+        for asset_id in x.get("asset_ids", []):
+            add(asset_id, x["id"])
+
     for x in d["attack_paths"]:
-        for t in x.get("threat_ids",[]): add(t,x["id"])
-        for det in x.get("detection_ids",[]): add(x["id"],det)
+        for threat_id in x.get("threat_ids", []):
+            add(threat_id, x["id"])
+        for detection_id in x.get("detection_ids", []):
+            add(x["id"], detection_id)
+
+    attack_paths_by_threat = {}
+    for ap in d["attack_paths"]:
+        for threat_id in ap.get("threat_ids", []):
+            attack_paths_by_threat.setdefault(threat_id, []).append(ap["id"])
+
     for x in d["security_requirements"]:
-        for t in x.get("threat_ids",[]):
-            for ap in d["attack_paths"]:
-                if t in ap.get("threat_ids",[]): add(ap["id"],x["id"])
+        for threat_id in x.get("threat_ids", []):
+            for ap_id in attack_paths_by_threat.get(threat_id, []):
+                add(ap_id, x["id"])
+
     for x in d["controls"]:
-        for r in x.get("requirement_ids",[]): add(r,x["id"])
+        for requirement_id in x.get("requirement_ids", []):
+            add(requirement_id, x["id"])
+
     for x in d["validations"]:
-        for c in x.get("control_ids",[]): add(c,x["id"])
+        for control_id in x.get("control_ids", []):
+            add(control_id, x["id"])
+
     for x in d["detections"]:
-        for ap in x.get("attack_path_ids",[]):
-            if d["operational_handoff"].get("response_owner"): add(x["id"],response_id)
+        for ap_id in x.get("attack_path_ids", []):
+            if handoff.get("response_owner"):
+                add(x["id"], response_id)
+
     for x in d["redesign"]:
-        lesson=x.get("source_lesson_id")
-        if lesson: add(lesson,x["id"])
-    graph={"security_gate":str(d["security_gate"].get("decision","" )).upper(),"nodes":nodes,"edges":edges}
-    Path(sys.argv[2]).write_text(json.dumps(graph,indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+        lesson_id = x.get("source_lesson_id")
+        if lesson_id:
+            add(lesson_id, x["id"])
+
+    gate = str(d.get("security_gate", {}).get("decision", "")).upper()
+    graph = {"security_gate": gate, "nodes": nodes, "edges": edges}
+    Path(sys.argv[2]).write_text(json.dumps(graph, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"Generated canonical graph: {sys.argv[2]}")
     return 0
-if __name__=="__main__": raise SystemExit(main())
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
