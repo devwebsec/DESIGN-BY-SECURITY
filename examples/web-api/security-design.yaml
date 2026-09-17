@@ -1,0 +1,80 @@
+version: "1.0"
+intent:
+  business_objective: "Provide an authenticated web API while limiting compromise impact."
+  scope: "Reference architecture only"
+  assumptions:
+    - "Concrete infrastructure values require validation."
+architecture:
+  components:
+    - id: client
+      type: external_client
+    - id: api_gateway
+      type: api_gateway
+    - id: api_service
+      type: application_service
+    - id: identity_provider
+      type: identity_provider
+    - id: database
+      type: data_store
+  dependencies: [identity_provider, database]
+assets:
+  - id: A-001
+    name: customer-data
+    classification: confidential
+    confidentiality: high
+    integrity: high
+    availability: medium
+  - id: A-002
+    name: service-identity
+    classification: restricted
+    confidentiality: high
+    integrity: high
+    availability: high
+data_flows:
+  - id: DF-001
+    source: client
+    identity: end_user
+    channel: HTTPS
+    processing: api_service
+    storage: database
+    destination: api_service
+trust_boundaries:
+  - id: TB-001
+    from: client
+    to: api_gateway
+    trust_change: external_to_application
+attack_surface:
+  - id: AS-001
+    component: api_gateway
+    exposure: internet
+    interface: HTTPS
+threat_model:
+  - id: T-001
+    scenario: stolen_identity_accesses_protected_data
+    severity: critical
+    confidence: probable
+attack_paths:
+  - id: AP-001
+    critical: true
+    steps: [stolen_identity, authenticated_request, api_service, customer_data]
+security_requirements:
+  - id: R-001
+    statement: "Protected API resources must enforce server-side authorization for every request."
+controls:
+  - id: C-001
+    type: preventive
+    requirement: R-001
+    control: server_side_authorization
+validation:
+  - id: V-001
+    requirement: R-001
+    test: "Attempt access to an object outside the caller's authorization scope."
+    expected: deny
+security_gate:
+  decision: APPROVE_WITH_CONDITIONS
+  residual_risk: "Reference artifact; concrete deployment evidence is required."
+operational_handoff:
+  telemetry: [authentication_events, authorization_denials, api_access_logs]
+  detection_gap: false
+lessons_learned: []
+redesign: []
