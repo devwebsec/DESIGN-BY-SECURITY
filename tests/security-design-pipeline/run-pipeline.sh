@@ -2,12 +2,20 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────
+# Security Design Pipeline Integration Test
+#
 # ИСТОРИЯ ИЗМЕНЕНИЙ
 # v1 → v2:
 #   [FIX-1] Добавлена функция check_dir() для проверки директорий.
 #   [FIX-2] check_file "$SEMANTIC_NEGATIVE" → check_dir "$SEMANTIC_NEGATIVE"
-#           (SEMANTIC_NEGATIVE — директория, check_file использует -f и
-#            всегда возвращал FAIL, хотя evaluate.py обрабатывал её корректно).
+#           (SEMANTIC_NEGATIVE — директория, check_file использует -f
+#            и всегда возвращал FAIL, хотя evaluate.py обрабатывал её
+#            корректно).
+#   [FIX-3] Level 6 запускает $FUZZ_EVAL, а не $SEMANTIC_EVAL.
+#           Ранее на Level 6 по ошибке вызывался evaluate.py с аргументом
+#           100, что давало "FAIL no negative fixtures" — evaluate.py
+#           воспринимал "100" как путь к директории фикстур и не находил
+#           *.json.
 # ─────────────────────────────────────────────────────────────────────
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -30,7 +38,7 @@ cleanup() {
 trap cleanup EXIT
 
 good() { printf 'PASS  %s\n' "$1"; pass=$((pass+1)); }
-bad() { printf 'FAIL  %s\n' "$1"; fail=$((fail+1)); }
+bad()  { printf 'FAIL  %s\n' "$1"; fail=$((fail+1)); }
 
 check_file() {
   local f="$1"
@@ -127,6 +135,7 @@ else
 fi
 
 printf '\n--- Level 6 property / graph fuzzing ---\n'
+# [FIX-3] Level 6 запускает $FUZZ_EVAL (не $SEMANTIC_EVAL).
 if python3 "$FUZZ_EVAL" "$SEMANTIC_VALID" 100; then
   good 'Level 6 bounded graph/property fuzzing'
 else
