@@ -24,6 +24,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
+      - name: Repository hygiene
+        run: |
+          set -euo pipefail
+          if git grep -Il $'\r' -- '*.sh' '*.py' '*.yml' '*.yaml' '*.json' '*.md' '*.txt'; then
+            echo 'ERROR: CRLF line endings detected in repository text files' >&2
+            exit 1
+          fi
+          git diff --check
+
       - name: Static syntax validation
         run: |
           bash -n build-security-copilot.sh
