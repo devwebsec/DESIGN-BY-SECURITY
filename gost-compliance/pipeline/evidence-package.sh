@@ -4,9 +4,10 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 STAMP="$(date -u +%Y-%m-%d-%H%M%S)"
 OUT="${1:-$REPO_ROOT/evidence-package-$STAMP}"
-ZIP="$REPO_ROOT/evidence-package-$STAMP.zip"
+PARENT="$(dirname "$OUT")"
+ZIP="$PARENT/$(basename "$OUT").zip"
 
-rm -rf "$OUT"
+rm -rf "$OUT" "$ZIP" "$ZIP.sha256"
 mkdir -p "$OUT/regulations" "$OUT/artifacts" "$OUT/pipeline" "$OUT/reports" "$OUT/metadata"
 cp "$REPO_ROOT/gost-compliance/GOST-OVERVIEW.md" "$OUT/"
 cp "$REPO_ROOT/gost-compliance/GOST-MAPPING.yml" "$OUT/"
@@ -25,7 +26,9 @@ fi
 
 printf '{\n  "git_commit": "%s",\n  "git_status_clean": %s,\n  "generated_utc": "%s"\n}\n' "$commit" "$([[ -z "$status" ]] && echo true || echo false)" "$STAMP" > "$OUT/metadata/manifest.json"
 
-( cd "$OUT" && find . -type f -print0 | sort -z | xargs -0 sha256sum > metadata/checksums.sha256 )
-( cd "$(dirname "$OUT")" && zip -qr "$ZIP" "$(basename "$OUT")" )
-printf '%s\n' "$ZIP"
+bash "$OUT/pipeline/gost-validate.sh" > "$OUT/reports/validation-$STAMP.log"
+
+( cd "$OUT" && find . -type f ! -path './metadata/checksums.sha256' -print0 | sort -z | xargs -0 sha256sum > metadata/checksums.sha256 )
+( cd "$PARENT" && zip -qr "$ZIP" "$(basename "$OUT")" )
 sha256sum "$ZIP" > "$ZIP.sha256"
+printf '%s\n' "$ZIP"
