@@ -8,11 +8,12 @@ PARENT="$(dirname "$OUT")"
 ZIP="$PARENT/$(basename "$OUT").zip"
 
 rm -rf "$OUT" "$ZIP" "$ZIP.sha256"
-mkdir -p "$OUT/regulations" "$OUT/artifacts" "$OUT/pipeline" "$OUT/reports" "$OUT/metadata"
+mkdir -p "$OUT/regulations" "$OUT/artifacts" "$OUT/pipeline" "$OUT/reports" "$OUT/metadata" "$OUT/examples/web-api"
 cp "$REPO_ROOT/gost-compliance/GOST-OVERVIEW.md" "$OUT/"
 cp "$REPO_ROOT/gost-compliance/GOST-MAPPING.yml" "$OUT/"
 cp -R "$REPO_ROOT/gost-compliance/regulations/." "$OUT/regulations/"
 cp -R "$REPO_ROOT/gost-compliance/artifacts/." "$OUT/artifacts/"
+cp "$REPO_ROOT/examples/web-api/security-design.yaml" "$OUT/examples/web-api/"
 cp "$REPO_ROOT/gost-compliance/pipeline/gost-validate.sh" "$OUT/pipeline/"
 cp "$REPO_ROOT/gost-compliance/pipeline/evidence-package.sh" "$OUT/pipeline/"
 
