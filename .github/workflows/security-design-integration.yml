@@ -23,12 +23,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Normalize repository text files for Linux CI
-        shell: bash
+      - name: Repository hygiene
         run: |
           set -euo pipefail
-          find . -type f \( -name '*.sh' -o -name '*.py' -o -name '*.yml' -o -name '*.yaml' -o -name '*.json' \) -print0 |
-            xargs -0 -r sed -i 's/\r$//'
+          if git grep -Il $'\r' -- '*.sh' '*.py' '*.yml' '*.yaml' '*.json' '*.md' '*.txt'; then
+            echo 'ERROR: CRLF line endings detected in repository text files' >&2
+            exit 1
+          fi
           git diff --check
 
       - name: Static syntax validation
