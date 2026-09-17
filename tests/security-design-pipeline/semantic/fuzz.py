@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Deterministic semantic validator for normalized Design-by-Security artifacts."""
+"""Deterministic Level-6 bounded graph/property fuzzer."""
 from __future__ import annotations
-import json, sys
+
+import copy
+import json
+import random
+import sys
 from pathlib import Path
 
 REQUIRED = [
@@ -16,8 +20,7 @@ def fail(msg: str) -> None:
 
 
 def load(path: Path) -> dict:
-    with path.open(encoding="utf-8") as fh:
-        obj = json.load(fh)
+    obj = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(obj, dict):
         fail("root must be an object")
     for key in REQUIRED:
@@ -43,8 +46,7 @@ def refs(values, target, label):
             fail(f"{label}: unknown reference {value}")
 
 
-def evaluate(path: Path) -> None:
-    d = load(path)
+def evaluate(d: dict) -> None:
     assets = ids(d["assets"], "assets")
     threats = ids(d["threats"], "threats")
     paths = ids(d["attack_paths"], "attack_paths")
@@ -55,27 +57,20 @@ def evaluate(path: Path) -> None:
     lessons = ids(d["lessons_learned"], "lessons_learned")
     redesign = ids(d["redesign"], "redesign")
 
-    # ─── [FIX v2] Learning-cycle balance ────────────────────────────
     if bool(lessons) != bool(redesign):
-        fail(
-            "learning_redesign_imbalance: lessons_learned and redesign "
-            "must be both empty or both populated"
-        )
-    # ────────────────────────────────────────────────────────────────
+        fail("learning_redesign_imbalance")
 
     for t in threats.values():
         refs(t.get("asset_ids", []), assets, f"threat {t['id']} asset_ids")
         if str(t.get("severity", "")).lower() == "critical":
-            linked = [r for r in reqs.values() if t["id"] in r.get("threat_ids", [])]
-            if not linked:
+            if not any(t["id"] in r.get("threat_ids", []) for r in reqs.values()):
                 fail(f"critical_threat_without_requirement: {t['id']}")
 
     for p in paths.values():
         refs(p.get("threat_ids", []), threats, f"attack_path {p['id']} threat_ids")
         refs(p.get("detection_ids", []), detections, f"attack_path {p['id']} detection_ids")
         if str(p.get("severity", "")).lower() == "critical" and not p.get("detection_ids"):
-            gap = str(p.get("detection_gap", "")).strip()
-            if not gap:
+            if not str(p.get("detection_gap", "")).strip():
                 fail(f"critical_attack_path_without_detection_or_explicit_gap: {p['id']}")
 
     for r in reqs.values():
@@ -87,14 +82,10 @@ def evaluate(path: Path) -> None:
     for c in controls.values():
         refs(c.get("requirement_ids", []), reqs, f"control {c['id']} requirement_ids")
         refs(c.get("validation_ids", []), vals, f"control {c['id']} validation_ids")
-
-    # ─── [FIX v2] Graph integrity: controls must not be dangling ────
-    for c in controls.values():
         if not c.get("requirement_ids"):
             fail(f"control_without_requirement: {c['id']}")
         if not c.get("validation_ids"):
             fail(f"control_without_validation: {c['id']}")
-    # ────────────────────────────────────────────────────────────────
 
     for v in vals.values():
         refs(v.get("requirement_ids", []), reqs, f"validation {v['id']} requirement_ids")
@@ -106,8 +97,7 @@ def evaluate(path: Path) -> None:
         if not any(r["id"] in c.get("requirement_ids", []) for c in controls.values()):
             fail(f"requirement_without_control: {r['id']}")
         for vid in r.get("validation_ids", []):
-            v = vals[vid]
-            if r["id"] not in v.get("requirement_ids", []):
+            if r["id"] not in vals[vid].get("requirement_ids", []):
                 fail(f"requirement_validation_mismatch: {r['id']} -> {vid}")
 
     for c in controls.values():
@@ -117,12 +107,8 @@ def evaluate(path: Path) -> None:
 
     for det in detections.values():
         refs(det.get("attack_path_ids", []), paths, f"detection {det['id']} attack_path_ids")
-
-    # ─── [FIX v2] Graph integrity: detections must not be dangling ──
-    for det in detections.values():
         if not det.get("attack_path_ids"):
             fail(f"detection_without_attack_path: {det['id']}")
-    # ────────────────────────────────────────────────────────────────
 
     handoff = d["operational_handoff"]
     refs(handoff.get("attack_path_ids", []), paths, "operational_handoff attack_path_ids")
@@ -140,13 +126,11 @@ def evaluate(path: Path) -> None:
     if gate.get("unknowns"):
         fail("unknown_presented_as_evidence: gate contains unresolved unknowns")
 
-    evidence = d.get("evidence", [])
-    for e in evidence:
+    for e in d.get("evidence", []):
         if not isinstance(e, dict) or not e.get("source"):
             fail("unknown_presented_as_evidence: evidence item has no source")
-        source = e["source"]
-        if source not in vals and source not in controls and source not in reqs:
-            fail(f"unknown_presented_as_evidence: invalid evidence source {source}")
+        if e["source"] not in vals and e["source"] not in controls and e["source"] not in reqs:
+            fail(f"unknown_presented_as_evidence: invalid evidence source {e['source']}")
 
     for lesson in lessons.values():
         if not lesson.get("root_cause"):
@@ -161,33 +145,72 @@ def evaluate(path: Path) -> None:
             fail(f"redesign references unknown lesson: {rd['id']}")
 
 
+def mutation_operators():
+    return [
+        ("remove critical threat requirement", lambda x: x["security_requirements"][0]["threat_ids"].clear()),
+        ("remove requirement validation", lambda x: x["security_requirements"][0]["validation_ids"].clear()),
+        ("remove critical path detection", lambda x: x["attack_paths"][0].update(detection_ids=[], detection_gap="")),
+        ("duplicate threat id", lambda x: x["threats"].append(copy.deepcopy(x["threats"][0]))),
+        ("invalid evidence", lambda x: x.setdefault("evidence", []).append({"source": "UNKNOWN-SOURCE"})),
+        ("disable destructive HITL", lambda x: x["operational_handoff"].update(human_approval_required_for_destructive_actions=False)),
+        ("remove lesson root cause", lambda x: x["lessons_learned"][0].update(root_cause="")),
+        ("remove redesign feedback", lambda x: x["redesign"].clear()),
+    ]
+
+
 def main() -> int:
-    if len(sys.argv) != 3:
-        print("usage: evaluate.py VALID.json NEGATIVE_DIR", file=sys.stderr)
+    if len(sys.argv) not in (2, 3):
+        print("usage: fuzz.py VALID.json [CASE_COUNT]", file=sys.stderr)
         return 2
-    valid = Path(sys.argv[1])
-    negative_dir = Path(sys.argv[2])
+    valid_path = Path(sys.argv[1])
+    requested = int(sys.argv[2]) if len(sys.argv) == 3 else 100
+    if requested < 1:
+        print("CASE_COUNT must be >= 1", file=sys.stderr)
+        return 2
+
     try:
-        evaluate(valid)
-        print(f"PASS  valid: {valid.name}")
+        base = load(valid_path)
+        evaluate(base)
     except Exception as exc:
-        print(f"FAIL  valid: {valid.name}: {exc}")
+        print(f"FAIL  valid: {valid_path.name}: {exc}")
         return 1
-    negatives = sorted(negative_dir.glob("*.json"))
-    if not negatives:
-        print("FAIL  no negative fixtures")
-        return 1
-    failed_as_expected = 0
-    for path in negatives:
+    print(f"PASS  valid: {valid_path.name}")
+
+    rng = random.Random(606)
+    operators = mutation_operators()
+    cases = []
+    depths = {1: 0, 2: 0, 3: 0}
+
+    # Guarantee every primitive operator is exercised first, then fill the bound
+    # with deterministic compositions of 1..3 distinct operators.
+    for name, op in operators:
+        cases.append(([name], [op]))
+        depths[1] += 1
+
+    while len(cases) < requested:
+        depth = rng.randint(1, 3)
+        selected = rng.sample(operators, min(depth, len(operators)))
+        cases.append(([name for name, _ in selected], [op for _, op in selected]))
+        depths[depth] += 1
+
+    rejected = 0
+    for idx, (names, ops) in enumerate(cases[:requested], 1):
+        obj = copy.deepcopy(base)
+        for op in ops:
+            op(obj)
         try:
-            evaluate(path)
-        except Exception as exc:
-            failed_as_expected += 1
-            print(f"PASS  negative: {path.name}: rejected ({exc})")
+            evaluate(obj)
+        except Exception:
+            rejected += 1
         else:
-            print(f"FAIL  negative: {path.name}: unexpectedly accepted")
-    print(f"SEMANTIC RESULT: {1 + failed_as_expected} passed, {len(negatives) - failed_as_expected} failed")
-    return 0 if failed_as_expected == len(negatives) else 1
+            print(f"FAIL  fuzz case {idx}: unexpectedly accepted ({' + '.join(names)})")
+            return 1
+
+    print(
+        f"FUZZ RESULT: {rejected} rejected / {requested} generated; "
+        f"depths=1:{depths[1]},2:{depths[2]},3:{depths[3]}"
+    )
+    return 0 if rejected == requested else 1
 
 
 if __name__ == "__main__":

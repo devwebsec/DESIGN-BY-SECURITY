@@ -13,7 +13,7 @@ orchestrators:
   operations: security-copilot-v4
 contracts:
   architecture_to_operations: design-by-security/DESIGN-BY-SECURITY-ADAPTER.md
-  operations_to_architecture: design-by-security/DESIGN-BY-SECURITY-ADAPTER.md
+  operations_to_architecture: skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md
 required_artifacts:
   - intent
   - architecture
