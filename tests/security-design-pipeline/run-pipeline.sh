@@ -54,6 +54,22 @@ for artifact in intent architecture assets data_flows trust_boundaries threat_mo
 for hard_fail in critical_threat_without_requirement requirement_without_validation critical_attack_path_without_detection_or_explicit_gap unresolved_critical_design_flaw unknown_presented_as_evidence destructive_action_without_human_approval incident_closed_without_root_cause_feedback; do check_contains "$MANIFEST" "  - $hard_fail" "manifest hard-fail: $hard_fail"; done
 for stage in Intent Design Asset Data Threat Attack Requirements Controls Validate Gate Operate Learn Redesign; do check_contains "$FIXTURE" "| $stage |" "artifact contract stage: $stage"; done
 
+# The manifest is intentionally JSON-compatible YAML. Verify the actual canonical
+# semantic artifact contains every manifest artifact, not merely the words in the manifest.
+if python3 - "$MANIFEST" "$SEMANTIC_VALID" <<'PY'
+import json,sys
+manifest=json.load(open(sys.argv[1],encoding='utf-8'))
+artifact=json.load(open(sys.argv[2],encoding='utf-8'))
+missing=[]
+for key in manifest['required_artifacts']:
+    actual='validations' if key=='validation' else key
+    if actual not in artifact:
+        missing.append(key)
+if missing:
+    raise SystemExit('missing canonical artifact fields: '+', '.join(missing))
+PY
+then good 'canonical artifact satisfies manifest required_artifacts'; else bad 'canonical artifact satisfies manifest required_artifacts'; fi
+
 run_tc 'TC-001' "$TEST_DIR/TC-001-web-api.md" 'Trust boundaries' 'Attack surface' 'Critical attack path' 'Expected requirements' 'Expected controls' 'Security Copilot handoff'
 run_tc 'TC-002' "$TEST_DIR/TC-002-identity-compromise.md" 'WHO→FROM WHERE→IDENTITY→RESOURCE→WHEN→PRIVILEGE→PURPOSE' 'blast radius' 'LATERAL MOVEMENT' 'Expected controls' 'Destructive actions require human approval' 'Security Copilot handoff'
 run_tc 'TC-003' "$TEST_DIR/TC-003-supply-chain.md" 'SOURCE CODE → DEPENDENCIES → DEVELOPER → CI/CD → BUILD RUNNER → ARTIFACT → REGISTRY → DEPLOYMENT' 'malicious dependency' 'SBOM' 'provenance' 'artifact integrity/signing' 'Security Copilot handoff'
@@ -70,11 +86,7 @@ if python3 "$FUZZ_EVAL" "$SEMANTIC_VALID" 100; then good 'Level 6 bounded graph/
 
 printf '\n--- Level 7 Security Graph Invariant Engine ---\n'
 GRAPH_TMP="$(mktemp)"
-if python3 "$GRAPH_ADAPTER" "$SEMANTIC_VALID" "$GRAPH_TMP" && python3 "$GRAPH_ENGINE" "$GRAPH_TMP"; then
-  good 'Level 7 canonical graph verification'
-else
-  bad 'Level 7 canonical graph verification'
-fi
+if python3 "$GRAPH_ADAPTER" "$SEMANTIC_VALID" "$GRAPH_TMP" && python3 "$GRAPH_ENGINE" "$GRAPH_TMP"; then good 'Level 7 canonical graph verification'; else bad 'Level 7 canonical graph verification'; fi
 if python3 "$GRAPH_ENGINE" "$GRAPH_VALID" >/dev/null; then good 'Level 7 reference graph verification'; else bad 'Level 7 reference graph verification'; fi
 if python3 "$GRAPH_MUTATION"; then good 'Level 7 invariant mutation rejection'; else bad 'Level 7 invariant mutation rejection'; fi
 
