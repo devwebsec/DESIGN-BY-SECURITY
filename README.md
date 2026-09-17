@@ -17,16 +17,29 @@ DESIGN -> BUILD -> DEPLOY -> DETECT -> RESPOND -> LEARN -> REDESIGN
 
 ```text
 .
-├── .github/workflows/blank.yml
-├── AI_SECURITY_COPILOT_2_1-1ppdkbstc7no5rj61t8dbufn3e.md
-├── DESIGN-BY-SECURITY-COPILOT-2.0-MASTER-PROMPT.md
+├── .github/workflows/
+│   └── security-design-integration.yml
 ├── design-by-security/
-│   └── DESIGN-BY-SECURITY-PROMPT.md
+│   ├── DESIGN-BY-SECURITY-PROMPT.md
+│   ├── DESIGN-BY-SECURITY-ADAPTER.md
+│   └── INTEGRATION.md
+├── skills/security-copilot/
+│   ├── security-copilot_v4.skill
+│   ├── DESIGN-BY-SECURITY-ADAPTER.md
+│   └── INTEGRATION.md
+├── tests/security-design-pipeline/
+│   ├── TEST-PLAN.md
+│   ├── EXPECTED-RESULTS.md
+│   ├── pipeline-manifest.yml
+│   ├── fixtures/expected-artifact-contract.md
+│   ├── TC-001-web-api.md
+│   ├── TC-002-identity-compromise.md
+│   ├── TC-003-supply-chain.md
+│   ├── TC-004-soc-feedback.md
+│   └── run-pipeline.sh
+├── DESIGN-BY-SECURITY-COPILOT-2.0-MASTER-PROMPT.md
+├── AI_SECURITY_COPILOT_2_1-1ppdkbstc7no5rj61t8dbufn3e.md
 ├── build-security-copilot.sh
-├── skills/
-│   └── security-copilot/
-│       ├── security-copilot_v4.skill
-│       └── INTEGRATION.md
 ├── LICENSE
 └── SECURITY.md
 ```
@@ -45,4 +58,17 @@ The Design-by-Security layer and Security Copilot v4 are intentionally kept
 separate so that the operational skill remains authoritative and reusable,
 while architecture acts as the security-design gate.
 
-See `skills/security-copilot/INTEGRATION.md` for the integration contract.
+## Integration validation
+
+The integration manifest defines the lifecycle, required artifacts and hard-fail
+conditions. The executable pipeline validates repository structure, the adapter
+contract, scenario contracts, skill archive integrity and actual builder execution.
+
+Run locally with:
+
+```bash
+bash tests/security-design-pipeline/run-pipeline.sh
+```
+
+The same pipeline runs in GitHub Actions for pushes to `main`/`integrate/**`/
+`hardening/**` and pull requests targeting `main`.

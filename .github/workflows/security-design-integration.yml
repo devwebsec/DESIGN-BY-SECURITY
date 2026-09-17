@@ -2,24 +2,38 @@ name: Security Design Integration
 
 on:
   push:
-    branches: [main, 'integrate/**']
+    branches: [main, 'integrate/**', 'hardening/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
 
+# Least privilege: GITHUB_TOKEN только на чтение.
 permissions:
   contents: read
+
+# Отменять устаревшие прогоны в той же ветке.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   integration-test:
     name: Design-by-Security ↔ Security Copilot v4
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
-      - name: Validate skill archive and integration contract
-        run: bash tests/security-design-pipeline/run-pipeline.sh
+      - name: Validate skill archive, contracts and scenarios
+        run: |
+          bash tests/security-design-pipeline/run-pipeline.sh 2>&1 | tee pipeline.log
+          exit ${PIPESTATUS[0]}
 
-      - name: Validate builder
-        run: bash -n build-security-copilot.sh
+      - name: Upload pipeline log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-log
+          path: pipeline.log
+          retention-days: 30
