@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# ─────────────────────────────────────────────────────────────────────
+# Security Design Pipeline Integration Test
+#
+# ИСТОРИЯ ИЗМЕНЕНИЙ
+# v1 → v2:
+#   [FIX-1] Добавлена функция check_dir() для проверки директорий.
+#   [FIX-2] check_file "$SEMANTIC_NEGATIVE" → check_dir "$SEMANTIC_NEGATIVE"
+#           (SEMANTIC_NEGATIVE — директория, check_file использует -f
+#            и всегда возвращал FAIL, хотя evaluate.py обрабатывал её
+#            корректно).
+#   [FIX-3] Level 6 запускает $FUZZ_EVAL, а не $SEMANTIC_EVAL.
+#           Ранее на Level 6 по ошибке вызывался evaluate.py с аргументом
+#           100, что давало "FAIL no negative fixtures" — evaluate.py
+#           воспринимал "100" как путь к директории фикстур и не находил
+#           *.json.
+# ─────────────────────────────────────────────────────────────────────
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TEST_DIR="$ROOT/tests/security-design-pipeline"
 SKILL_ARCHIVE="$ROOT/skills/security-copilot/security-copilot_v4.skill"
@@ -22,13 +39,29 @@ BUILD_TMP=""
 cleanup() { [[ -n "$BUILD_TMP" && -d "$BUILD_TMP" ]] && rm -rf "$BUILD_TMP"; }
 trap cleanup EXIT
 
-good(){ printf 'PASS  %s\n' "$1"; pass=$((pass+1)); }
-bad(){ printf 'FAIL  %s\n' "$1"; fail=$((fail+1)); }
-check_file(){ [[ -f "$1" ]] && good "${1#$ROOT/}" || bad "${1#$ROOT/}"; }
-check_dir(){ [[ -d "$1" ]] && good "${1#$ROOT/}" || bad "${1#$ROOT/}"; }
-check_contains(){ local f="$1" p="$2" label="${3:-${1#$ROOT/} contains [$2]}"; grep -Fq "$p" "$f" && good "$label" || bad "$label"; }
-run_tc(){
-  local id="$1" file="$2"; shift 2; local ok=1 p
+good() { printf 'PASS  %s\n' "$1"; pass=$((pass+1)); }
+bad()  { printf 'FAIL  %s\n' "$1"; fail=$((fail+1)); }
+
+check_file() {
+  local f="$1"
+  [[ -f "$f" ]] && good "${f#$ROOT/}" || bad "${f#$ROOT/}"
+}
+
+# [FIX-1] Проверка директорий (для fixtures/negative).
+check_dir() {
+  local d="$1"
+  [[ -d "$d" ]] && good "${d#$ROOT/}" || bad "${d#$ROOT/}"
+}
+
+check_contains() {
+  local f="$1" pattern="$2" label
+  label="${3:-${1#$ROOT/} contains [$2]}"
+  if grep -Fq "$pattern" "$f"; then good "$label"; else bad "$label"; fi
+}
+
+run_tc() {
+  local id="$1" file="$2"; shift 2
+  local ok=1 pattern
   printf '\n--- %s ---\n' "$id"
   if [[ ! -f "$file" ]]; then bad "$id scenario file"; printf 'TC RESULT: %s FAIL\n' "$id"; return; fi
   good "$id scenario file"
@@ -64,7 +97,12 @@ printf '\n--- Level 5+ mutation / metamorphic evaluation ---\n'
 if python3 "$MUTATION_EVAL" "$SEMANTIC_VALID"; then good 'Level 5+ adversarial mutation rejection'; good 'Level 5+ metamorphic invariants'; else bad 'Level 5+ mutation / metamorphic evaluation'; fi
 
 printf '\n--- Level 6 property / graph fuzzing ---\n'
-if python3 "$FUZZ_EVAL" "$SEMANTIC_VALID" 100; then good 'Level 6 bounded graph/property fuzzing'; else bad 'Level 6 bounded graph/property fuzzing'; fi
+# [FIX-3] Level 6 запускает $FUZZ_EVAL (не $SEMANTIC_EVAL).
+if python3 "$FUZZ_EVAL" "$SEMANTIC_VALID" 100; then
+  good 'Level 6 bounded graph/property fuzzing'
+else
+  bad 'Level 6 bounded graph/property fuzzing'
+fi
 
 printf '\n--- Level 7 Security Graph Invariant Engine ---\n'
 if python3 "$GRAPH_ENGINE" "$GRAPH_VALID" --report "$TEST_DIR/graph/level7-report.json"; then good 'Level 7 graph invariant verification'; else bad 'Level 7 graph invariant verification'; fi
