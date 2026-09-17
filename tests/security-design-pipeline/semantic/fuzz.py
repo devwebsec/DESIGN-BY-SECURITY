@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Deterministic bounded fuzzer for normalized Design-by-Security artifacts."""
+"""Deterministic Level-6 bounded semantic/property fuzzer."""
 from __future__ import annotations
+
 import copy
 import json
 import random
@@ -19,8 +20,7 @@ def fail(message: str) -> None:
 
 
 def load(path: Path) -> dict:
-    with path.open(encoding="utf-8") as fh:
-        obj = json.load(fh)
+    obj = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(obj, dict):
         fail("root must be an object")
     for key in REQUIRED:
@@ -141,8 +141,8 @@ def evaluate(d: dict) -> None:
             fail(f"redesign references unknown lesson: {item['id']}")
 
 
-def mutation_cases(base: dict):
-    specs = [
+def operators():
+    return [
         ("remove critical threat requirement", lambda x: x["security_requirements"][0]["threat_ids"].clear()),
         ("remove requirement validation", lambda x: x["security_requirements"][0]["validation_ids"].clear()),
         ("remove critical path detection", lambda x: x["attack_paths"][0].update(detection_ids=[], detection_gap="")),
@@ -152,12 +152,6 @@ def mutation_cases(base: dict):
         ("remove lesson root cause", lambda x: x["lessons_learned"][0].update(root_cause="")),
         ("remove redesign feedback", lambda x: x["redesign"].clear()),
     ]
-    cases = []
-    for name, mutation in specs:
-        obj = copy.deepcopy(base)
-        mutation(obj)
-        cases.append((name, obj))
-    return cases
 
 
 def main() -> int:
@@ -165,7 +159,11 @@ def main() -> int:
         print("usage: fuzz.py VALID.json [CASE_COUNT]", file=sys.stderr)
         return 2
     valid_path = Path(sys.argv[1])
-    requested = int(sys.argv[2]) if len(sys.argv) == 3 else 100
+    try:
+        requested = int(sys.argv[2]) if len(sys.argv) == 3 else 100
+    except ValueError:
+        print("CASE_COUNT must be an integer", file=sys.stderr)
+        return 2
     if requested < 1:
         print("CASE_COUNT must be >= 1", file=sys.stderr)
         return 2
@@ -178,42 +176,29 @@ def main() -> int:
         return 1
     print(f"PASS  valid: {valid_path.name}")
 
+    ops = operators()
     rng = random.Random(606)
-    primitive = mutation_cases(base)
     cases = []
-    for _ in range(requested):
-        count = rng.randint(1, min(3, len(primitive)))
-        selected = rng.sample(primitive, count)
-        obj = copy.deepcopy(base)
-        names = []
-        for name, mutation_obj in selected:
-            names.append(name)
-            # Each primitive mutation is generated from the pristine base; replay its delta
-            # by applying the corresponding mutation operation directly to the evolving object.
-            # Reconstruct the operation from the named case to guarantee true composition.
-            for candidate_name, candidate_fn in [
-                ("remove critical threat requirement", lambda x: x["security_requirements"][0]["threat_ids"].clear()),
-                ("remove requirement validation", lambda x: x["security_requirements"][0]["validation_ids"].clear()),
-                ("remove critical path detection", lambda x: x["attack_paths"][0].update(detection_ids=[], detection_gap="")),
-                ("duplicate threat id", lambda x: x["threats"].append(copy.deepcopy(x["threats"][0]))),
-                ("invalid evidence", lambda x: x.setdefault("evidence", []).append({"source": "UNKNOWN-SOURCE"})),
-                ("disable destructive HITL", lambda x: x["operational_handoff"].update(human_approval_required_for_destructive_actions=False)),
-                ("remove lesson root cause", lambda x: x["lessons_learned"][0].update(root_cause="")),
-                ("remove redesign feedback", lambda x: x["redesign"].clear()),
-            ]:
-                if candidate_name == name:
-                    candidate_fn(obj)
-                    break
-        cases.append(("combo:" + ";".join(names), obj))
+    for i in range(requested):
+        if i < len(ops):
+            selected = [ops[i]]
+        else:
+            selected = rng.sample(ops, rng.randint(1, min(3, len(ops))))
+        cases.append(selected)
 
     rejected = 0
-    for index, (name, obj) in enumerate(cases, 1):
+    for index, selected in enumerate(cases, 1):
+        obj = copy.deepcopy(base)
+        names = []
+        for name, mutation in selected:
+            names.append(name)
+            mutation(obj)
         try:
             evaluate(obj)
         except Exception:
             rejected += 1
         else:
-            print(f"FAIL  fuzz case {index}: unexpectedly accepted ({name})")
+            print(f"FAIL  fuzz case {index}: unexpectedly accepted ({' + '.join(names)})")
             return 1
 
     print(f"FUZZ RESULT: {rejected} rejected / {requested} generated")

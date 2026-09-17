@@ -2,7 +2,7 @@ name: Security Design Integration
 
 on:
   push:
-    branches: [main, 'integrate/**', 'hardening/**', 'devwebsec-claudefix-security-copilot-integration']
+    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'devwebsec-claudefix-security-copilot-integration']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -31,11 +31,11 @@ jobs:
             xargs -0 -r sed -i 's/\r$//'
           git diff --check
 
-      - name: Validate Python sources
+      - name: Static syntax validation
         run: |
-          python3 -m py_compile \
-            tests/security-design-pipeline/semantic/*.py \
-            tests/security-design-pipeline/graph/*.py
+          bash -n build-security-copilot.sh
+          bash -n tests/security-design-pipeline/run-pipeline.sh
+          python3 -m py_compile tests/security-design-pipeline/semantic/*.py tests/security-design-pipeline/graph/*.py
 
       - name: Validate skill archive, contracts and scenarios
         run: |
@@ -44,8 +44,9 @@ jobs:
 
       - name: Upload pipeline log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: pipeline-log
           path: pipeline.log
+          if-no-files-found: error
           retention-days: 30
