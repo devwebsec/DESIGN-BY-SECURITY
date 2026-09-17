@@ -1,0 +1,3 @@
+version: "1.0"
+suppliers: []
+# supplier, service, criticality, security_requirements, assessment, review_date
