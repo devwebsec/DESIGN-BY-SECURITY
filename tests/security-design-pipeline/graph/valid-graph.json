@@ -1,0 +1,27 @@
+{
+  "security_gate":"PASS",
+  "nodes":[
+    {"id":"A-001","type":"asset","criticality":"CRITICAL"},
+    {"id":"T-001","type":"threat","criticality":"CRITICAL"},
+    {"id":"AP-001","type":"attack_path"},
+    {"id":"R-001","type":"requirement"},
+    {"id":"C-001","type":"control"},
+    {"id":"V-001","type":"validation","status":"PASS"},
+    {"id":"D-001","type":"detection"},
+    {"id":"RC-001","type":"root_cause"},
+    {"id":"SD-001","type":"security_debt"},
+    {"id":"RD-001","type":"redesign"},
+    {"id":"RS-001","type":"response","destructive":true,"human_approval_required":true}
+  ],
+  "edges":[
+    {"source":"A-001","target":"T-001"},
+    {"source":"T-001","target":"AP-001"},
+    {"source":"T-001","target":"D-001"},
+    {"source":"AP-001","target":"R-001"},
+    {"source":"R-001","target":"C-001"},
+    {"source":"C-001","target":"V-001"},
+    {"source":"D-001","target":"RS-001"},
+    {"source":"RC-001","target":"SD-001"},
+    {"source":"SD-001","target":"RD-001"}
+  ]
+}
