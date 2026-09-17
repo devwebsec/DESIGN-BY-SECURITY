@@ -11,6 +11,7 @@ MUTATION_EVAL="$TEST_DIR/semantic/mutate.py"
 FUZZ_EVAL="$TEST_DIR/semantic/fuzz.py"
 SEMANTIC_VALID="$TEST_DIR/semantic/fixtures/valid-web-api.json"
 SEMANTIC_NEGATIVE="$TEST_DIR/semantic/fixtures/negative"
+GRAPH_ADAPTER="$TEST_DIR/graph/from_semantic.py"
 GRAPH_ENGINE="$TEST_DIR/graph/verify_graph.py"
 GRAPH_VALID="$TEST_DIR/graph/valid-graph.json"
 GRAPH_MUTATION="$TEST_DIR/graph/mutation-tests.py"
@@ -18,7 +19,11 @@ GRAPH_MUTATION="$TEST_DIR/graph/mutation-tests.py"
 pass=0
 fail=0
 BUILD_TMP=""
-cleanup() { [[ -n "$BUILD_TMP" && -d "$BUILD_TMP" ]] && rm -rf "$BUILD_TMP"; }
+GRAPH_TMP=""
+cleanup() {
+  [[ -n "$BUILD_TMP" && -d "$BUILD_TMP" ]] && rm -rf -- "$BUILD_TMP"
+  [[ -n "$GRAPH_TMP" && -f "$GRAPH_TMP" ]] && rm -f -- "$GRAPH_TMP"
+}
 trap cleanup EXIT
 
 good(){ printf 'PASS  %s\n' "$1"; pass=$((pass+1)); }
@@ -38,7 +43,7 @@ run_tc(){
 printf '%s\n' '=== Security Design Pipeline Integration Test ==='
 printf '%s\n\n' 'Repository contract: Design-by-Security ↔ Security Copilot v4'
 
-for f in "$ROOT/design-by-security/DESIGN-BY-SECURITY-PROMPT.md" "$ROOT/design-by-security/DESIGN-BY-SECURITY-ADAPTER.md" "$ROOT/skills/security-copilot/security-copilot_v4.skill" "$ROOT/skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md" "$ROOT/build-security-copilot.sh" "$MANIFEST" "$FIXTURE" "$SEMANTIC_EVAL" "$MUTATION_EVAL" "$FUZZ_EVAL" "$SEMANTIC_VALID" "$GRAPH_ENGINE" "$GRAPH_VALID" "$GRAPH_MUTATION"; do check_file "$f"; done
+for f in "$ROOT/design-by-security/DESIGN-BY-SECURITY-PROMPT.md" "$ROOT/design-by-security/DESIGN-BY-SECURITY-ADAPTER.md" "$ROOT/skills/security-copilot/security-copilot_v4.skill" "$ROOT/skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md" "$ROOT/build-security-copilot.sh" "$MANIFEST" "$FIXTURE" "$SEMANTIC_EVAL" "$MUTATION_EVAL" "$FUZZ_EVAL" "$SEMANTIC_VALID" "$GRAPH_ADAPTER" "$GRAPH_ENGINE" "$GRAPH_VALID" "$GRAPH_MUTATION"; do check_file "$f"; done
 check_dir "$SEMANTIC_NEGATIVE"
 check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-PROMPT.md" 'DESIGN → BUILD → DEPLOY → DETECT → RESPOND → LEARN → REDESIGN'
 check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-ADAPTER.md" 'Security Copilot'
@@ -64,7 +69,13 @@ printf '\n--- Level 6 property / graph fuzzing ---\n'
 if python3 "$FUZZ_EVAL" "$SEMANTIC_VALID" 100; then good 'Level 6 bounded graph/property fuzzing'; else bad 'Level 6 bounded graph/property fuzzing'; fi
 
 printf '\n--- Level 7 Security Graph Invariant Engine ---\n'
-if python3 "$GRAPH_ENGINE" "$GRAPH_VALID" --report "$TEST_DIR/graph/level7-report.json"; then good 'Level 7 graph invariant verification'; else bad 'Level 7 graph invariant verification'; fi
+GRAPH_TMP="$(mktemp)"
+if python3 "$GRAPH_ADAPTER" "$SEMANTIC_VALID" "$GRAPH_TMP" && python3 "$GRAPH_ENGINE" "$GRAPH_TMP"; then
+  good 'Level 7 canonical graph verification'
+else
+  bad 'Level 7 canonical graph verification'
+fi
+if python3 "$GRAPH_ENGINE" "$GRAPH_VALID" >/dev/null; then good 'Level 7 reference graph verification'; else bad 'Level 7 reference graph verification'; fi
 if python3 "$GRAPH_MUTATION"; then good 'Level 7 invariant mutation rejection'; else bad 'Level 7 invariant mutation rejection'; fi
 
 printf '\n--- Packaging / builder gate ---\n'
