@@ -40,19 +40,23 @@ artifacts=(
 )
 for f in "${artifacts[@]}"; do check_file "$ART/$f"; done
 
-# Contract sanity: exactly 25 process IDs and 13 artifact references.
+# Contract sanity: exactly 25 process IDs and 25 mapping entries.
 process_count=$(grep -Ec '^  - id: "5\.[0-9]+"$' "$MAP" || true)
 artifact_count=$(grep -Ec '^    artifact:' "$MAP" || true)
 [[ "$process_count" -eq 25 ]] || { echo "FAIL  expected 25 mapped processes, got $process_count" >&2; fail=$((fail+1)); }
 [[ "$artifact_count" -eq 25 ]] || { echo "FAIL  expected 25 artifact mapping entries, got $artifact_count" >&2; fail=$((fail+1)); }
 
-# Cross-reference the reference design: every requirement/control/validation chain must exist.
-EXAMPLE="$ROOT/../../examples/web-api/security-design.yaml"
-if [[ -f "$EXAMPLE" ]]; then
-  grep -q '^  - id: R-001$' "$EXAMPLE" && grep -q '^    requirement: R-001$' "$EXAMPLE" && grep -q '^    requirement: R-001$' "$EXAMPLE" && {
-    echo 'PASS  reference requirement/control/validation chain R-001'
-    pass=$((pass+1))
-  } || { echo 'FAIL  broken reference requirement/control/validation chain' >&2; fail=$((fail+1)); }
+# Cross-reference the repository reference design. A missing reference is a validation failure, not a skipped check.
+EXAMPLE="$ROOT/../examples/web-api/security-design.yaml"
+if [[ ! -f "$EXAMPLE" ]]; then
+  echo "FAIL  missing reference design: $EXAMPLE" >&2
+  fail=$((fail+1))
+elif grep -q '^  - id: R-001$' "$EXAMPLE" && grep -q '^    requirement: R-001$' "$EXAMPLE"; then
+  echo 'PASS  reference requirement/control/validation chain R-001'
+  pass=$((pass+1))
+else
+  echo 'FAIL  broken reference requirement/control/validation chain' >&2
+  fail=$((fail+1))
 fi
 
 printf '\nLEVEL 8 RESULT: %d passed, %d failed\n' "$pass" "$fail"
