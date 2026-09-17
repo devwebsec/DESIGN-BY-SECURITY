@@ -15,9 +15,8 @@ cleanup() {
 }
 trap cleanup EXIT
 
-# Only remove the two package names expected by this builder. The parent must
-# be the current workspace or a temporary directory; this prevents a caller
-# from turning the builder into an arbitrary rm -rf primitive.
+# Only remove package targets under the workspace or TMPDIR. This prevents the
+# builder from becoming an arbitrary rm -rf primitive.
 PWD_REAL="$(realpath -m -- "$PWD")"
 TMP_BASE="$(realpath -m -- "${TMPDIR:-/tmp}")"
 case "$PACKAGE_NAME" in
@@ -105,7 +104,9 @@ FINDING -> ROOT CAUSE -> SECURITY DEBT -> REQUIREMENT/CONTROL -> VALIDATION -> R
 The two prompts are deliberately not flattened into one monolithic prompt.
 DOC
 
-( cd "$(dirname -- "$ROOT")" && zip -qr -- "$OUT" "$PACKAGE_NAME" )
+# zip(1) treats a leading -- as an archive name rather than an option terminator.
+# Keep the archive path quoted, and use -- only where the installed zip supports it.
+( cd "$(dirname -- "$ROOT")" && zip -qr "$OUT" "$PACKAGE_NAME" )
 if ! unzip -t "$OUT" >/dev/null 2>&1; then
   echo "ERROR: generated package failed archive integrity validation: $OUT" >&2
   exit 6
