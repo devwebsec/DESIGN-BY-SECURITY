@@ -1,0 +1,85 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+status: "implementation-overlay"
+legal_note: "Not a certification or legal compliance determination."
+processes:
+  - id: "5.1"
+    name: planning
+    artifact: planning-status-analysis.yml
+  - id: "5.2"
+    name: training
+    artifact: training-log.yml
+  - id: "5.3"
+    name: security-requirements
+    artifact: requirements-registry.yml
+  - id: "5.4"
+    name: configuration-management
+    artifact: configuration-items.yml
+  - id: "5.5"
+    name: deficiency-management
+    artifact: defects-registry.yml
+  - id: "5.6"
+    name: architecture
+    artifact: null
+  - id: "5.7"
+    name: threat-modeling
+    artifact: null
+  - id: "5.8"
+    name: secure-coding
+    artifact: null
+  - id: "5.9"
+    name: code-review
+    artifact: code-review-log.yml
+  - id: "5.10"
+    name: static-analysis
+    artifact: sast-tools.yml
+  - id: "5.11"
+    name: dynamic-analysis
+    artifact: null
+  - id: "5.12"
+    name: build
+    artifact: build-tools.yml
+  - id: "5.13"
+    name: secrets-management
+    artifact: secrets-inventory.yml
+  - id: "5.14"
+    name: dependency-management
+    artifact: dependencies-inventory.yml
+  - id: "5.15"
+    name: supplier-security
+    artifact: suppliers-registry.yml
+  - id: "5.16"
+    name: software-supply-chain
+    artifact: null
+  - id: "5.17"
+    name: security-testing
+    artifact: fuzzing-targets.yml
+  - id: "5.18"
+    name: release
+    artifact: null
+  - id: "5.19"
+    name: delivery
+    artifact: null
+  - id: "5.20"
+    name: security-validation
+    artifact: null
+  - id: "5.21"
+    name: release-evidence
+    artifact: null
+  - id: "5.22"
+    name: maintenance
+    artifact: null
+  - id: "5.23"
+    name: vulnerability-response
+    artifact: null
+  - id: "5.24"
+    name: security-monitoring
+    artifact: null
+  - id: "5.25"
+    name: decommissioning
+    artifact: decommission-plan.yml
+hard_fail:
+  - missing_required_process_artifact
+  - broken_cross_reference
+  - unknown_presented_as_evidence
+  - unresolved_critical_design_flaw

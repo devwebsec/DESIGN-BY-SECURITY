@@ -2,7 +2,7 @@ name: Security Design Integration
 
 on:
   push:
-    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'devwebsec-claudefix-security-copilot-integration']
+    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'devwebsec-claudefix-security-copilot-integration', 'feat/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -18,7 +18,7 @@ jobs:
   integration-test:
     name: Design-by-Security ↔ Security Copilot v4
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -36,18 +36,35 @@ jobs:
         run: |
           bash -n build-security-copilot.sh
           bash -n tests/security-design-pipeline/run-pipeline.sh
+          bash -n gost-compliance/pipeline/gost-validate.sh
+          bash -n gost-compliance/pipeline/evidence-package.sh
           python3 -m py_compile tests/security-design-pipeline/semantic/*.py tests/security-design-pipeline/graph/*.py
+          python3 -m json.tool schemas/security-design.schema.json >/dev/null
 
       - name: Validate skill archive, contracts and scenarios
         run: |
           bash tests/security-design-pipeline/run-pipeline.sh 2>&1 | tee pipeline.log
           exit ${PIPESTATUS[0]}
 
-      - name: Upload pipeline log
+      - name: Level 8 — GOST process overlay
+        run: |
+          bash gost-compliance/pipeline/gost-validate.sh 2>&1 | tee gost-validation.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Build audit evidence package
+        run: |
+          mkdir -p evidence-output
+          bash gost-compliance/pipeline/evidence-package.sh "$PWD/evidence-output/package"
+
+      - name: Upload validation logs
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: pipeline-log
-          path: pipeline.log
+          name: security-design-validation
+          path: |
+            pipeline.log
+            gost-validation.log
+            evidence-output/*.zip
+            evidence-output/*.sha256
           if-no-files-found: error
           retention-days: 30

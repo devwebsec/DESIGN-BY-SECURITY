@@ -1,0 +1,3 @@
+version: "1.0"
+tools: []
+# tool, version, scope, policy, findings_threshold, evidence

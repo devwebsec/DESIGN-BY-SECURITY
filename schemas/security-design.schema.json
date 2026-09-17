@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/devwebsec/DESIGN-BY-SECURITY/blob/main/schemas/security-design.schema.json",
+  "title": "Design-by-Security Security Design Artifact",
+  "type": "object",
+  "required": ["intent", "architecture", "assets", "data_flows", "trust_boundaries", "threat_model", "attack_paths", "security_requirements", "controls", "validation", "security_gate", "operational_handoff", "lessons_learned", "redesign"],
+  "properties": {
+    "intent": {"type": "object", "required": ["business_objective", "scope"]},
+    "architecture": {"type": "object", "required": ["components", "dependencies"]},
+    "assets": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
+    "data_flows": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
+    "trust_boundaries": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
+    "threat_model": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
+    "attack_paths": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
+    "security_requirements": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
+    "controls": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
+    "validation": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
+    "security_gate": {"type": "object", "required": ["decision", "residual_risk"]},
+    "operational_handoff": {"type": "object"},
+    "lessons_learned": {"type": "array"},
+    "redesign": {"type": "array"}
+  },
+  "$defs": {
+    "id_object": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {"id": {"type": "string"}},
+      "additionalProperties": true
+    }
+  }
+}

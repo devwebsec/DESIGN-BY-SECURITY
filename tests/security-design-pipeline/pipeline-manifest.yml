@@ -1,4 +1,4 @@
-version: "1.0"
+version: "1.1"
 name: security-design-pipeline
 lifecycle:
   - DESIGN
@@ -29,6 +29,12 @@ required_artifacts:
   - operational_handoff
   - lessons_learned
   - redesign
+levels:
+  level_4: semantic_relationship_validation
+  level_5: mutation_metamorphic_evaluation
+  level_6: bounded_property_graph_fuzzing
+  level_7: security_graph_invariant_engine
+  level_8: gost_r_56939_2024_process_overlay
 hard_fail:
   - critical_threat_without_requirement
   - requirement_without_validation
@@ -37,3 +43,5 @@ hard_fail:
   - unknown_presented_as_evidence
   - destructive_action_without_human_approval
   - incident_closed_without_root_cause_feedback
+  - missing_required_process_artifact
+  - broken_cross_reference
