@@ -50,25 +50,30 @@ check_contains "$ROOT/design-by-security/DESIGN-BY-SECURITY-ADAPTER.md" 'Securit
 check_contains "$ROOT/skills/security-copilot/DESIGN-BY-SECURITY-ADAPTER.md" 'Detection-by-Design'
 
 printf '\n--- Manifest / artifact contract ---\n'
-for artifact in intent architecture assets data_flows trust_boundaries threat_model attack_paths security_requirements controls validation security_gate operational_handoff lessons_learned redesign; do check_contains "$MANIFEST" "  - $artifact" "manifest required artifact: $artifact"; done
-for hard_fail in critical_threat_without_requirement requirement_without_validation critical_attack_path_without_detection_or_explicit_gap unresolved_critical_design_flaw unknown_presented_as_evidence destructive_action_without_human_approval incident_closed_without_root_cause_feedback; do check_contains "$MANIFEST" "  - $hard_fail" "manifest hard-fail: $hard_fail"; done
-for stage in Intent Design Asset Data Threat Attack Requirements Controls Validate Gate Operate Learn Redesign; do check_contains "$FIXTURE" "| $stage |" "artifact contract stage: $stage"; done
-
-# The manifest is intentionally JSON-compatible YAML. Verify the actual canonical
-# semantic artifact contains every manifest artifact, not merely the words in the manifest.
+# pipeline-manifest.yml is YAML, not JSON. Parse only the deliberately simple
+# required_artifacts list with the standard library instead of introducing a
+# runtime PyYAML dependency into CI.
 if python3 - "$MANIFEST" "$SEMANTIC_VALID" <<'PY'
-import json,sys
-manifest=json.load(open(sys.argv[1],encoding='utf-8'))
+import json, re, sys
+manifest_text=open(sys.argv[1],encoding='utf-8').read()
 artifact=json.load(open(sys.argv[2],encoding='utf-8'))
+match=re.search(r'^required_artifacts:\s*\n((?:^\s+-\s+[^\n]+\n?)+)', manifest_text, re.M)
+if not match:
+    raise SystemExit('required_artifacts section missing from manifest')
+required=[re.sub(r'^\s+-\s+','',line).strip() for line in match.group(1).splitlines() if line.strip()]
 missing=[]
-for key in manifest['required_artifacts']:
+for key in required:
     actual='validations' if key=='validation' else key
     if actual not in artifact:
         missing.append(key)
 if missing:
     raise SystemExit('missing canonical artifact fields: '+', '.join(missing))
+print('manifest required_artifacts:', ', '.join(required))
 PY
 then good 'canonical artifact satisfies manifest required_artifacts'; else bad 'canonical artifact satisfies manifest required_artifacts'; fi
+
+for hard_fail in critical_threat_without_requirement requirement_without_validation critical_attack_path_without_detection_or_explicit_gap unresolved_critical_design_flaw unknown_presented_as_evidence destructive_action_without_human_approval incident_closed_without_root_cause_feedback; do check_contains "$MANIFEST" "  - $hard_fail" "manifest hard-fail: $hard_fail"; done
+for stage in Intent Design Asset Data Threat Attack Requirements Controls Validate Gate Operate Learn Redesign; do check_contains "$FIXTURE" "| $stage |" "artifact contract stage: $stage"; done
 
 run_tc 'TC-001' "$TEST_DIR/TC-001-web-api.md" 'Trust boundaries' 'Attack surface' 'Critical attack path' 'Expected requirements' 'Expected controls' 'Security Copilot handoff'
 run_tc 'TC-002' "$TEST_DIR/TC-002-identity-compromise.md" 'WHO→FROM WHERE→IDENTITY→RESOURCE→WHEN→PRIVILEGE→PURPOSE' 'blast radius' 'LATERAL MOVEMENT' 'Expected controls' 'Destructive actions require human approval' 'Security Copilot handoff'
