@@ -2,23 +2,29 @@
 
 ## Security Architecture & Engineering Operating System
 
-This repository combines two complementary layers:
+This repository implements the architecture described by the Design-by-Security presentation as an executable, testable security engineering operating model.
 
-- **Design-by-Security** — architecture-first security design, threat modeling, security requirements, controls, validation and security gates.
-- **Security Copilot v4** — operational SOC, IR, DFIR, hunting, detection, IOC/CTI, malware and security-engineering analysis.
+It combines two complementary planes:
 
-### Operating model
+- **Design-by-Security** — architecture-first security design, threat modeling, requirements, controls, validation and security gates.
+- **Security Copilot v4** — operational SOC, IR, DFIR, hunting, detection and security-engineering analysis.
+
+The planes are intentionally separated and connected by explicit adapters.
+
+### Master operating model
 
 ```text
-DESIGN -> BUILD -> DEPLOY -> DETECT -> RESPOND -> LEARN -> REDESIGN
+BUSINESS → SECURITY GOALS → ASSETS → DATA FLOWS → TRUST BOUNDARIES
+→ ATTACK SURFACE → THREAT MODEL → ATTACK PATHS → REQUIREMENTS
+→ CONTROLS → ARCHITECTURE → BUILD → VALIDATE → DEPLOY → DETECT
+→ RESPOND → RECOVER → LEARN → REDESIGN
 ```
 
 ### Repository structure
 
 ```text
 .
-├── .github/workflows/
-│   └── security-design-integration.yml
+├── .github/workflows/security-design-integration.yml
 ├── design-by-security/
 │   ├── DESIGN-BY-SECURITY-PROMPT.md
 │   ├── DESIGN-BY-SECURITY-ADAPTER.md
@@ -36,7 +42,17 @@ DESIGN -> BUILD -> DEPLOY -> DETECT -> RESPOND -> LEARN -> REDESIGN
 │   ├── TC-002-identity-compromise.md
 │   ├── TC-003-supply-chain.md
 │   ├── TC-004-soc-feedback.md
+│   ├── semantic/
+│   ├── graph/
 │   └── run-pipeline.sh
+├── schemas/
+│   └── security-design.schema.json
+├── examples/
+│   └── web-api/security-design.yaml
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── ENGINE-CATALOG.md
+│   └── SECURITY-DESIGN-CONTRACT.md
 ├── DESIGN-BY-SECURITY-COPILOT-2.0-MASTER-PROMPT.md
 ├── AI_SECURITY_COPILOT_2_1-1ppdkbstc7no5rj61t8dbufn3e.md
 ├── build-security-copilot.sh
@@ -44,25 +60,33 @@ DESIGN -> BUILD -> DEPLOY -> DETECT -> RESPOND -> LEARN -> REDESIGN
 └── SECURITY.md
 ```
 
-## Design principle
+## Design principles
 
-Do not bolt security onto an already-defined architecture. Start with:
+Security is a design property, not a post-production patch.
 
-`BUSINESS -> ASSETS -> DATA -> IDENTITIES -> ARCHITECTURE -> TRUST BOUNDARIES -> ATTACK SURFACE -> THREATS -> ATTACK PATHS -> REQUIREMENTS -> CONTROLS -> VALIDATION`
+The architecture process starts with business context and evidence, not technology selection. Critical attack paths must have prevention, detection, response and recovery coverage or an explicit detection gap. Unknowns are preserved as unknowns and never silently promoted to evidence.
 
-The operational layer then closes the loop:
+Controls are assessed as:
 
-`DETECT -> RESPOND -> LEARN -> REDESIGN`
+`EXISTS → CONFIGURED → EFFECTIVE → TESTED`
 
-The Design-by-Security layer and Security Copilot v4 are intentionally kept
-separate so that the operational skill remains authoritative and reusable,
-while architecture acts as the security-design gate.
+Compliance mapping is not treated as proof of actual security.
+
+## Feedback loop
+
+Operational findings return to architecture through:
+
+`OBSERVATION → FINDING → ROOT CAUSE → SECURITY DEBT / DESIGN FLAW → REQUIREMENT OR CONTROL CHANGE → VALIDATION → REDESIGN`
+
+Destructive response actions require human authorization.
+
+## Machine-readable contract
+
+The canonical required artifact set is defined by `tests/security-design-pipeline/pipeline-manifest.yml`; a human-readable explanation is in `docs/SECURITY-DESIGN-CONTRACT.md`; the machine-readable artifact shape is in `schemas/security-design.schema.json`.
+
+A reference web API artifact is available under `examples/web-api/`.
 
 ## Integration validation
-
-The integration manifest defines the lifecycle, required artifacts and hard-fail
-conditions. The executable pipeline validates repository structure, the adapter
-contract, scenario contracts, skill archive integrity and actual builder execution.
 
 Run locally with:
 
@@ -70,5 +94,8 @@ Run locally with:
 bash tests/security-design-pipeline/run-pipeline.sh
 ```
 
-The same pipeline runs in GitHub Actions for pushes to `main`/`integrate/**`/
-`hardening/**` and pull requests targeting `main`.
+The same gate runs in GitHub Actions for `main`, integration, hardening and audit branches and for pull requests targeting `main`.
+
+## Presentation alignment
+
+`docs/ARCHITECTURE.md` and `docs/ENGINE-CATALOG.md` translate the presentation into repository-level implementation responsibilities. The presentation's architecture is therefore represented by executable contracts, reference artifacts, adapters and CI gates rather than by documentation alone.
