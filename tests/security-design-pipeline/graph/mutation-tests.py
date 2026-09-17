@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Level-7 graph invariant mutation gate."""
+"""Level 7 graph invariant mutation gate."""
 from __future__ import annotations
 import copy,json,subprocess,sys,tempfile
 from pathlib import Path
-HERE=Path(__file__).parent; ENGINE=HERE/"verify_graph.py"; BASE=json.loads((HERE/"valid-graph.json").read_text(encoding="utf-8"))
+HERE=Path(__file__).parent; ENGINE=HERE/"verify_graph.py"; BASE=json.loads((HERE/"valid-graph.json").read_text())
 
 def rejected(obj):
     with tempfile.NamedTemporaryFile("w",suffix=".json",delete=False) as f:
@@ -29,6 +29,7 @@ add("learn-without-redesign",lambda d:d["nodes"].pop(9))
 
 bad=0
 for name,obj in cases:
-    ok=rejected(obj); print(("PASS" if ok else "FAIL"),name,"rejected" if ok else "accepted"); bad += not ok
+    ok=rejected(obj); print(("PASS" if ok else "FAIL"),name,"rejected" if ok else "accepted")
+    bad += not ok
 print(f"LEVEL 7 MUTATION RESULT: {len(cases)-bad} passed, {bad} failed")
 raise SystemExit(1 if bad else 0)
