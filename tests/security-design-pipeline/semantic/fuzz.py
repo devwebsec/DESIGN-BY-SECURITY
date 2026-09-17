@@ -1,7 +1,18 @@
 #!/usr/bin/env python3
-"""Deterministic Level-6 bounded graph/property fuzzer for normalized Design-by-Security artifacts."""
+"""Deterministic Level-6 bounded graph/property fuzzer.
+
+The fuzzer is intentionally self-contained: it starts from the known-good
+normalized artifact, applies one to three *composed* mutation operators, and
+requires every mutated artifact to be rejected by the same semantic evaluator.
+No pre-generated negative-fixture directory is required.
+"""
 from __future__ import annotations
-import copy, json, random, sys
+
+import copy
+import json
+import random
+import sys
+import tempfile
 from pathlib import Path
 
 REQUIRED = [
@@ -123,8 +134,7 @@ def evaluate(d: dict) -> None:
     if gate.get("unknowns"):
         fail("unknown_presented_as_evidence: gate contains unresolved unknowns")
 
-    evidence = d.get("evidence", [])
-    for e in evidence:
+    for e in d.get("evidence", []):
         if not isinstance(e, dict) or not e.get("source"):
             fail("unknown_presented_as_evidence: evidence item has no source")
         source = e["source"]
@@ -144,22 +154,28 @@ def evaluate(d: dict) -> None:
             fail(f"redesign references unknown lesson: {rd['id']}")
 
 
-def mutations(base: dict):
-    cases = []
-    def add(name, fn):
-        x = copy.deepcopy(base)
-        fn(x)
-        cases.append((name, x))
+def mutation_operators():
+    return [
+        ("remove critical threat requirement", lambda d: d["security_requirements"][0]["threat_ids"].clear()),
+        ("remove requirement validation", lambda d: d["security_requirements"][0]["validation_ids"].clear()),
+        ("remove critical path detection", lambda d: d["attack_paths"][0].update(detection_ids=[], detection_gap="")),
+        ("add unresolved gate flaw", lambda d: d["security_gate"].update(unresolved_critical_design_flaws=["FUZZ-FLAW"])),
+        ("add invalid evidence", lambda d: d.setdefault("evidence", []).append({"id": "FUZZ-EVIDENCE", "source": "UNKNOWN-SOURCE"})),
+        ("disable destructive HITL", lambda d: d["operational_handoff"].update(human_approval_required_for_destructive_actions=False)),
+        ("remove lesson root cause", lambda d: d["lessons_learned"][0].pop("root_cause", None)),
+        ("break redesign feedback", lambda d: d["redesign"][0].update(source_lesson_id="UNKNOWN-LESSON")),
+        ("duplicate threat id", lambda d: d["threats"].append(copy.deepcopy(d["threats"][0]))),
+        ("remove requirement control link", lambda d: d["controls"][0]["requirement_ids"].clear()),
+    ]
 
-    add("remove critical threat requirement", lambda x: x["security_requirements"][0]["threat_ids"].clear())
-    add("remove requirement validation", lambda x: x["security_requirements"][0]["validation_ids"].clear())
-    add("remove critical path detection", lambda x: x["attack_paths"][0].update(detection_ids=[], detection_gap=""))
-    add("duplicate threat id", lambda x: x["threats"].append(copy.deepcopy(x["threats"][0])))
-    add("invalid evidence", lambda x: x.setdefault("evidence", []).append({"source": "UNKNOWN-SOURCE"}))
-    add("disable destructive HITL", lambda x: x["operational_handoff"].update(human_approval_required_for_destructive_actions=False))
-    add("remove lesson root cause", lambda x: x["lessons_learned"][0].update(root_cause=""))
-    add("remove redesign feedback", lambda x: x["redesign"].clear())
-    return cases
+
+def apply_composed(base: dict, selected):
+    obj = copy.deepcopy(base)
+    names = []
+    for name, operator in selected:
+        operator(obj)
+        names.append(name)
+    return obj, "; ".join(names)
 
 
 def main() -> int:
@@ -181,29 +197,27 @@ def main() -> int:
         return 1
 
     rng = random.Random(606)
-    cases = mutations(base)
-    # Deterministically repeat/combine mutations until the requested bound is reached.
-    while len(cases) < requested:
-        selected = rng.sample(mutations(base), rng.randint(1, 3))
-        x = copy.deepcopy(base)
-        names = []
-        for name, mut in selected:
-            names.append(name)
-            # Apply mutation by replaying the changed object as a whole.
-            x = mut
-        cases.append(("combo:" + ";".join(names), x))
-
+    operators = mutation_operators()
     rejected = 0
-    for idx, (name, obj) in enumerate(cases[:requested], 1):
+    composition_counts = {1: 0, 2: 0, 3: 0}
+
+    for idx in range(1, requested + 1):
+        depth = rng.randint(1, min(3, len(operators)))
+        selected = rng.sample(operators, depth)
+        obj, description = apply_composed(base, selected)
+        composition_counts[depth] += 1
         try:
             evaluate(obj)
         except Exception:
             rejected += 1
         else:
-            print(f"FAIL  fuzz case {idx}: unexpectedly accepted ({name})")
+            print(f"FAIL  fuzz case {idx}: unexpectedly accepted ({description})")
             return 1
 
-    print(f"FUZZ RESULT: {rejected} rejected / {requested} generated")
+    print(
+        f"FUZZ RESULT: {rejected} rejected / {requested} generated; "
+        f"depths=1:{composition_counts[1]},2:{composition_counts[2]},3:{composition_counts[3]}"
+    )
     return 0 if rejected == requested else 1
 
 
