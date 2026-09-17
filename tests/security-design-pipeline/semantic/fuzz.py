@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Deterministic Level-6 bounded graph/property fuzzer for normalized Design-by-Security artifacts."""
+"""Deterministic bounded fuzzer for normalized Design-by-Security artifacts."""
 from __future__ import annotations
-import copy, json, random, sys
+import copy
+import json
+import random
+import sys
 from pathlib import Path
 
 REQUIRED = [
@@ -11,8 +14,8 @@ REQUIRED = [
 ]
 
 
-def fail(msg: str) -> None:
-    raise ValueError(msg)
+def fail(message: str) -> None:
+    raise ValueError(message)
 
 
 def load(path: Path) -> dict:
@@ -27,14 +30,14 @@ def load(path: Path) -> dict:
 
 
 def ids(items, label):
-    out = {}
+    result = {}
     for item in items:
         if not isinstance(item, dict) or not item.get("id"):
             fail(f"{label}: every item requires id")
-        if item["id"] in out:
+        if item["id"] in result:
             fail(f"{label}: duplicate id {item['id']}")
-        out[item["id"]] = item
-    return out
+        result[item["id"]] = item
+    return result
 
 
 def refs(values, target, label):
@@ -57,55 +60,51 @@ def evaluate(d: dict) -> None:
     if bool(lessons) != bool(redesign):
         fail("learning_redesign_imbalance")
 
-    for t in threats.values():
-        refs(t.get("asset_ids", []), assets, f"threat {t['id']} asset_ids")
-        if str(t.get("severity", "")).lower() == "critical":
-            if not any(t["id"] in r.get("threat_ids", []) for r in reqs.values()):
-                fail(f"critical_threat_without_requirement: {t['id']}")
+    for threat in threats.values():
+        refs(threat.get("asset_ids", []), assets, f"threat {threat['id']} asset_ids")
+        if str(threat.get("severity", "")).lower() == "critical" and not any(
+            threat["id"] in req.get("threat_ids", []) for req in reqs.values()
+        ):
+            fail(f"critical_threat_without_requirement: {threat['id']}")
 
-    for p in paths.values():
-        refs(p.get("threat_ids", []), threats, f"attack_path {p['id']} threat_ids")
-        refs(p.get("detection_ids", []), detections, f"attack_path {p['id']} detection_ids")
-        if str(p.get("severity", "")).lower() == "critical" and not p.get("detection_ids"):
-            if not str(p.get("detection_gap", "")).strip():
-                fail(f"critical_attack_path_without_detection_or_explicit_gap: {p['id']}")
+    for path in paths.values():
+        refs(path.get("threat_ids", []), threats, f"attack_path {path['id']} threat_ids")
+        refs(path.get("detection_ids", []), detections, f"attack_path {path['id']} detection_ids")
+        if str(path.get("severity", "")).lower() == "critical" and not path.get("detection_ids") and not str(path.get("detection_gap", "")).strip():
+            fail(f"critical_attack_path_without_detection_or_explicit_gap: {path['id']}")
 
-    for r in reqs.values():
-        refs(r.get("threat_ids", []), threats, f"requirement {r['id']} threat_ids")
-        refs(r.get("validation_ids", []), vals, f"requirement {r['id']} validation_ids")
-        if not r.get("validation_ids"):
-            fail(f"requirement_without_validation: {r['id']}")
+    for req in reqs.values():
+        refs(req.get("threat_ids", []), threats, f"requirement {req['id']} threat_ids")
+        refs(req.get("validation_ids", []), vals, f"requirement {req['id']} validation_ids")
+        if not req.get("validation_ids"):
+            fail(f"requirement_without_validation: {req['id']}")
+        if not any(req["id"] in c.get("requirement_ids", []) for c in controls.values()):
+            fail(f"requirement_without_control: {req['id']}")
+        for vid in req.get("validation_ids", []):
+            if req["id"] not in vals[vid].get("requirement_ids", []):
+                fail(f"requirement_validation_mismatch: {req['id']} -> {vid}")
 
-    for c in controls.values():
-        refs(c.get("requirement_ids", []), reqs, f"control {c['id']} requirement_ids")
-        refs(c.get("validation_ids", []), vals, f"control {c['id']} validation_ids")
-        if not c.get("requirement_ids"):
-            fail(f"control_without_requirement: {c['id']}")
-        if not c.get("validation_ids"):
-            fail(f"control_without_validation: {c['id']}")
+    for control in controls.values():
+        refs(control.get("requirement_ids", []), reqs, f"control {control['id']} requirement_ids")
+        refs(control.get("validation_ids", []), vals, f"control {control['id']} validation_ids")
+        if not control.get("requirement_ids"):
+            fail(f"control_without_requirement: {control['id']}")
+        if not control.get("validation_ids"):
+            fail(f"control_without_validation: {control['id']}")
+        for vid in control.get("validation_ids", []):
+            if control["id"] not in vals[vid].get("control_ids", []):
+                fail(f"control_validation_mismatch: {control['id']} -> {vid}")
 
-    for v in vals.values():
-        refs(v.get("requirement_ids", []), reqs, f"validation {v['id']} requirement_ids")
-        refs(v.get("control_ids", []), controls, f"validation {v['id']} control_ids")
-        if str(v.get("result", "")).lower() != "pass":
-            fail(f"validation_not_passed: {v['id']}")
+    for validation in vals.values():
+        refs(validation.get("requirement_ids", []), reqs, f"validation {validation['id']} requirement_ids")
+        refs(validation.get("control_ids", []), controls, f"validation {validation['id']} control_ids")
+        if str(validation.get("result", "")).lower() != "pass":
+            fail(f"validation_not_passed: {validation['id']}")
 
-    for r in reqs.values():
-        if not any(r["id"] in c.get("requirement_ids", []) for c in controls.values()):
-            fail(f"requirement_without_control: {r['id']}")
-        for vid in r.get("validation_ids", []):
-            if r["id"] not in vals[vid].get("requirement_ids", []):
-                fail(f"requirement_validation_mismatch: {r['id']} -> {vid}")
-
-    for c in controls.values():
-        for vid in c.get("validation_ids", []):
-            if c["id"] not in vals[vid].get("control_ids", []):
-                fail(f"control_validation_mismatch: {c['id']} -> {vid}")
-
-    for det in detections.values():
-        refs(det.get("attack_path_ids", []), paths, f"detection {det['id']} attack_path_ids")
-        if not det.get("attack_path_ids"):
-            fail(f"detection_without_attack_path: {det['id']}")
+    for detection in detections.values():
+        refs(detection.get("attack_path_ids", []), paths, f"detection {detection['id']} attack_path_ids")
+        if not detection.get("attack_path_ids"):
+            fail(f"detection_without_attack_path: {detection['id']}")
 
     handoff = d["operational_handoff"]
     refs(handoff.get("attack_path_ids", []), paths, "operational_handoff attack_path_ids")
@@ -123,13 +122,11 @@ def evaluate(d: dict) -> None:
     if gate.get("unknowns"):
         fail("unknown_presented_as_evidence: gate contains unresolved unknowns")
 
-    evidence = d.get("evidence", [])
-    for e in evidence:
-        if not isinstance(e, dict) or not e.get("source"):
+    for evidence in d.get("evidence", []):
+        if not isinstance(evidence, dict) or not evidence.get("source"):
             fail("unknown_presented_as_evidence: evidence item has no source")
-        source = e["source"]
-        if source not in vals and source not in controls and source not in reqs:
-            fail(f"unknown_presented_as_evidence: invalid evidence source {source}")
+        if evidence["source"] not in vals and evidence["source"] not in controls and evidence["source"] not in reqs:
+            fail(f"unknown_presented_as_evidence: invalid evidence source {evidence['source']}")
 
     for lesson in lessons.values():
         if not lesson.get("root_cause"):
@@ -139,26 +136,27 @@ def evaluate(d: dict) -> None:
         if not any(rd.get("source_lesson_id") == lesson["id"] for rd in redesign.values()):
             fail(f"incident_closed_without_root_cause_feedback: {lesson['id']}")
 
-    for rd in redesign.values():
-        if rd.get("source_lesson_id") not in lessons:
-            fail(f"redesign references unknown lesson: {rd['id']}")
+    for item in redesign.values():
+        if item.get("source_lesson_id") not in lessons:
+            fail(f"redesign references unknown lesson: {item['id']}")
 
 
-def mutations(base: dict):
+def mutation_cases(base: dict):
+    specs = [
+        ("remove critical threat requirement", lambda x: x["security_requirements"][0]["threat_ids"].clear()),
+        ("remove requirement validation", lambda x: x["security_requirements"][0]["validation_ids"].clear()),
+        ("remove critical path detection", lambda x: x["attack_paths"][0].update(detection_ids=[], detection_gap="")),
+        ("duplicate threat id", lambda x: x["threats"].append(copy.deepcopy(x["threats"][0]))),
+        ("invalid evidence", lambda x: x.setdefault("evidence", []).append({"source": "UNKNOWN-SOURCE"})),
+        ("disable destructive HITL", lambda x: x["operational_handoff"].update(human_approval_required_for_destructive_actions=False)),
+        ("remove lesson root cause", lambda x: x["lessons_learned"][0].update(root_cause="")),
+        ("remove redesign feedback", lambda x: x["redesign"].clear()),
+    ]
     cases = []
-    def add(name, fn):
-        x = copy.deepcopy(base)
-        fn(x)
-        cases.append((name, x))
-
-    add("remove critical threat requirement", lambda x: x["security_requirements"][0]["threat_ids"].clear())
-    add("remove requirement validation", lambda x: x["security_requirements"][0]["validation_ids"].clear())
-    add("remove critical path detection", lambda x: x["attack_paths"][0].update(detection_ids=[], detection_gap=""))
-    add("duplicate threat id", lambda x: x["threats"].append(copy.deepcopy(x["threats"][0])))
-    add("invalid evidence", lambda x: x.setdefault("evidence", []).append({"source": "UNKNOWN-SOURCE"}))
-    add("disable destructive HITL", lambda x: x["operational_handoff"].update(human_approval_required_for_destructive_actions=False))
-    add("remove lesson root cause", lambda x: x["lessons_learned"][0].update(root_cause=""))
-    add("remove redesign feedback", lambda x: x["redesign"].clear())
+    for name, mutation in specs:
+        obj = copy.deepcopy(base)
+        mutation(obj)
+        cases.append((name, obj))
     return cases
 
 
@@ -175,32 +173,47 @@ def main() -> int:
     try:
         base = load(valid_path)
         evaluate(base)
-        print(f"PASS  valid: {valid_path.name}")
     except Exception as exc:
         print(f"FAIL  valid: {valid_path.name}: {exc}")
         return 1
+    print(f"PASS  valid: {valid_path.name}")
 
     rng = random.Random(606)
-    cases = mutations(base)
-    # Deterministically repeat/combine mutations until the requested bound is reached.
-    while len(cases) < requested:
-        selected = rng.sample(mutations(base), rng.randint(1, 3))
-        x = copy.deepcopy(base)
+    primitive = mutation_cases(base)
+    cases = []
+    for _ in range(requested):
+        count = rng.randint(1, min(3, len(primitive)))
+        selected = rng.sample(primitive, count)
+        obj = copy.deepcopy(base)
         names = []
-        for name, mut in selected:
+        for name, mutation_obj in selected:
             names.append(name)
-            # Apply mutation by replaying the changed object as a whole.
-            x = mut
-        cases.append(("combo:" + ";".join(names), x))
+            # Each primitive mutation is generated from the pristine base; replay its delta
+            # by applying the corresponding mutation operation directly to the evolving object.
+            # Reconstruct the operation from the named case to guarantee true composition.
+            for candidate_name, candidate_fn in [
+                ("remove critical threat requirement", lambda x: x["security_requirements"][0]["threat_ids"].clear()),
+                ("remove requirement validation", lambda x: x["security_requirements"][0]["validation_ids"].clear()),
+                ("remove critical path detection", lambda x: x["attack_paths"][0].update(detection_ids=[], detection_gap="")),
+                ("duplicate threat id", lambda x: x["threats"].append(copy.deepcopy(x["threats"][0]))),
+                ("invalid evidence", lambda x: x.setdefault("evidence", []).append({"source": "UNKNOWN-SOURCE"})),
+                ("disable destructive HITL", lambda x: x["operational_handoff"].update(human_approval_required_for_destructive_actions=False)),
+                ("remove lesson root cause", lambda x: x["lessons_learned"][0].update(root_cause="")),
+                ("remove redesign feedback", lambda x: x["redesign"].clear()),
+            ]:
+                if candidate_name == name:
+                    candidate_fn(obj)
+                    break
+        cases.append(("combo:" + ";".join(names), obj))
 
     rejected = 0
-    for idx, (name, obj) in enumerate(cases[:requested], 1):
+    for index, (name, obj) in enumerate(cases, 1):
         try:
             evaluate(obj)
         except Exception:
             rejected += 1
         else:
-            print(f"FAIL  fuzz case {idx}: unexpectedly accepted ({name})")
+            print(f"FAIL  fuzz case {index}: unexpectedly accepted ({name})")
             return 1
 
     print(f"FUZZ RESULT: {rejected} rejected / {requested} generated")
