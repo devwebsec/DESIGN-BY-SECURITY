@@ -1,8 +1,10 @@
-# Keep executable/test sources portable across Windows and Linux runners.
-*.sh text eol=lf
-*.py text eol=lf
-*.yml text eol=lf
+# Normalize all text files to LF on commit, regardless of OS.
+* text=auto eol=lf
+
+*.sh   text eol=lf
+*.py   text eol=lf
+*.yml  text eol=lf
 *.yaml text eol=lf
 *.json text eol=lf
-*.md text eol=lf
-*.txt text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
