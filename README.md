@@ -26,39 +26,23 @@ BUSINESS → SECURITY GOALS → ASSETS → DATA FLOWS → TRUST BOUNDARIES
 .
 ├── .github/workflows/security-design-integration.yml
 ├── design-by-security/
-│   ├── DESIGN-BY-SECURITY-PROMPT.md
-│   ├── DESIGN-BY-SECURITY-ADAPTER.md
-│   └── INTEGRATION.md
 ├── skills/security-copilot/
-│   ├── security-copilot_v4.skill
-│   ├── DESIGN-BY-SECURITY-ADAPTER.md
-│   └── INTEGRATION.md
 ├── tests/security-design-pipeline/
-│   ├── TEST-PLAN.md
-│   ├── EXPECTED-RESULTS.md
-│   ├── pipeline-manifest.yml
-│   ├── fixtures/expected-artifact-contract.md
-│   ├── TC-001-web-api.md
-│   ├── TC-002-identity-compromise.md
-│   ├── TC-003-supply-chain.md
-│   ├── TC-004-soc-feedback.md
-│   ├── semantic/
-│   ├── graph/
-│   └── run-pipeline.sh
-├── schemas/
-│   └── security-design.schema.json
-├── examples/
-│   └── web-api/security-design.yaml
+├── schemas/security-design.schema.json
+├── examples/web-api/security-design.yaml
+├── gost-compliance/
 ├── docs/
-│   ├── ARCHITECTURE.md
-│   ├── ENGINE-CATALOG.md
-│   └── SECURITY-DESIGN-CONTRACT.md
 ├── DESIGN-BY-SECURITY-COPILOT-2.0-MASTER-PROMPT.md
 ├── AI_SECURITY_COPILOT_2_1-1ppdkbstc7no5rj61t8dbufn3e.md
+├── SECURITY-METRICS.md
+├── DEPENDENCIES.md
+├── REPOSITORY-MAP.md
 ├── build-security-copilot.sh
 ├── LICENSE
 └── SECURITY.md
 ```
+
+Use `REPOSITORY-MAP.md` as the canonical navigation map. `SECURITY-METRICS.md` defines the 12-axis measurement model and repository KPIs. `DEPENDENCIES.md` defines the runtime and CI dependency contract.
 
 ## Design principles
 
@@ -94,8 +78,15 @@ Run locally with:
 bash tests/security-design-pipeline/run-pipeline.sh
 ```
 
-The same gate runs in GitHub Actions for `main`, integration, hardening and audit branches and for pull requests targeting `main`.
+For the process/evidence overlay:
+
+```bash
+bash gost-compliance/pipeline/gost-validate.sh
+bash gost-compliance/pipeline/evidence-package.sh ./evidence-output/package
+```
+
+The same gates run in GitHub Actions for `main`, integration, hardening and audit branches and for pull requests targeting `main`.
 
 ## Presentation alignment
 
-`docs/ARCHITECTURE.md` and `docs/ENGINE-CATALOG.md` translate the presentation into repository-level implementation responsibilities. The presentation's architecture is therefore represented by executable contracts, reference artifacts, adapters and CI gates rather than by documentation alone.
+`docs/ARCHITECTURE.md`, `docs/ENGINE-CATALOG.md`, `docs/PRESENTATION-MAP.md` and `REPOSITORY-MAP.md` translate the presentation into repository-level implementation responsibilities. The presentation's architecture is therefore represented by executable contracts, reference artifacts, adapters, measurements and CI gates rather than by documentation alone.
