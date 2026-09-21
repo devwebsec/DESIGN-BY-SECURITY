@@ -2,27 +2,29 @@
 
 ## Scope
 
-This repository is intentionally lightweight. The security-design pipeline is implemented with shell scripts, Python validation utilities, YAML/JSON contracts and a packaged Security Copilot skill. There is no application package manager or production service runtime in the repository.
+This repository is intentionally lightweight. The security-design pipeline is implemented with shell scripts, Python validation utilities, YAML/JSON contracts and a packaged Security Copilot skill. The repository also contains a dependency-free Python runtime/API and thin CLI client; no third-party Python runtime packages are required by the v0.1 service.
 
 ## Runtime dependencies
 
 | Dependency | Used by | Required capability | Verification |
 |---|---|---|---|
 | Bash | all `.sh` pipeline/build scripts | shell execution with `set -euo pipefail` | `bash -n` + execution |
-| Python 3 | semantic/graph validators | standard-library validation/fuzz logic | `python3 -m py_compile` + execution |
+| Python 3.12+ | runtime server, CLI and semantic/graph validators | standard-library HTTP, SQLite and validation logic | `python3 -m py_compile` + runtime smoke |
+| `curl` | runtime smoke test | HTTP API verification | CI smoke execution |
 | `zip` | `build-security-copilot.sh` | package creation | builder execution |
 | `unzip` | builder | archive validation/extraction | builder integrity tests |
+| Docker/Compose | single-node deployment and CI image validation | containerized runtime | `docker build` + deployment smoke |
 | Git | CI hygiene | diff/check repository state | `git diff --check`, `git grep` |
 | GitHub Actions runner | CI only | Ubuntu execution environment | workflow run |
 
-The Python validators must not silently acquire third-party runtime dependencies. If a future implementation adds one, it must be declared here and validated in CI.
+The Python runtime must not silently acquire third-party dependencies. If a future implementation adds one, it must be declared here and validated in CI.
 
 ## GitHub Actions dependencies
 
-External actions are pinned to immutable commit SHAs in `.github/workflows/security-design-integration.yml`. The workflow currently uses:
+External actions are pinned to immutable commit SHAs in `.github/workflows/security-design-integration.yml`. The workflow uses Node.js 24-compatible releases:
 
-- `actions/checkout` pinned to a v4 commit;
-- `actions/upload-artifact` pinned to a v4.6.2 commit.
+- `actions/checkout` pinned to `3d3c42e5aac5ba805825da76410c181273ba90b1` (v7.0.1);
+- `actions/upload-artifact` pinned to `043fb46d1a93c77aae656e7c1c64a875d1fc6a0a` (v7.0.1).
 
 Do not replace SHA pinning with floating major/minor tags in the security gate.
 
@@ -41,10 +43,11 @@ Do not replace SHA pinning with floating major/minor tags in the security gate.
 
 ## Reproducibility
 
-The supported local validation entry point is:
+The supported local validation entry points are:
 
 ```bash
 bash tests/security-design-pipeline/run-pipeline.sh
+PORT=18080 bash apps/runtime-smoke.sh
 ```
 
 The reproducible package build is:
@@ -53,4 +56,10 @@ The reproducible package build is:
 bash build-security-copilot.sh
 ```
 
-The CI workflow additionally performs shell/Python/JSON syntax validation and the GOST process/evidence gates.
+The container image can be validated with:
+
+```bash
+docker build --file deployment/docker/Dockerfile --tag security-copilot:ci .
+```
+
+The CI workflow additionally performs shell/Python/JSON syntax validation, runtime authentication checks, container image validation, and the GOST process/evidence gates.
