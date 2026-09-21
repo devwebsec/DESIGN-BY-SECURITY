@@ -49,7 +49,7 @@ jobs:
           test -f deployment/internal/.env.example
           test -f deployment/internal/README.md
           test -f .gitignore
-          ! grep -nE 'SECURITY_COPILOT_API_TOKEN=(?!replace-with-a-long-random-token)' deployment/internal/.env.example 2>/dev/null || true
+          grep -q '^SECURITY_COPILOT_API_TOKEN=replace-with-a-long-random-token$' deployment/internal/.env.example
           docker compose --env-file deployment/internal/.env.example -f deployment/internal/docker-compose.yml config >/tmp/security-copilot-compose.yml
           grep -q 'caddy:2.10-alpine' /tmp/security-copilot-compose.yml
           grep -q 'security-copilot' /tmp/security-copilot-compose.yml
