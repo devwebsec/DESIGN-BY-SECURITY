@@ -91,7 +91,7 @@ The same gates run in GitHub Actions for `main`, integration, hardening and audi
 
 `docs/ARCHITECTURE.md`, `docs/ENGINE-CATALOG.md`, `docs/PRESENTATION-MAP.md` and `REPOSITORY-MAP.md` translate the presentation into repository-level implementation responsibilities. The presentation's architecture is therefore represented by executable contracts, reference artifacts, adapters, measurements and CI gates rather than by documentation alone.
 
-# DESIGN-BY-SECURITY
+# DESIGN-BY-SECURITY (РАЗРАБОТКА С УЧЕТОМ БЕЗОПАСНОСТИ)
 
 ## Архитектура безопасности и проектирование операционных систем
 
