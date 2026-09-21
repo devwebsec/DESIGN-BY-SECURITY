@@ -1,0 +1,8 @@
+.git
+.github
+.gitignore
+__pycache__
+*.pyc
+*.db
+data/
+evidence-output/

@@ -24,14 +24,16 @@ BUSINESS → SECURITY GOALS → ASSETS → DATA FLOWS → TRUST BOUNDARIES
 
 ```text
 .
-├── .github/workflows/security-design-integration.yml
-├── design-by-security/
-├── skills/security-copilot/
-├── tests/security-design-pipeline/
-├── schemas/security-design.schema.json
-├── examples/web-api/security-design.yaml
-├── gost-compliance/
-├── docs/
+├── apps/                         # runtime server + thin CLI client
+├── deployment/docker/            # single-node deployment
+├── .github/workflows/            # CI/security verification boundary
+├── design-by-security/           # design plane + adapters
+├── skills/security-copilot/      # Security Copilot skill
+├── tests/security-design-pipeline/# L4 → L7 deterministic verification
+├── schemas/                      # machine-readable contracts
+├── examples/                     # reference artifacts
+├── gost-compliance/              # process/evidence overlay
+├── docs/                         # architecture, contracts, runtime docs
 ├── DESIGN-BY-SECURITY-COPILOT-2.0-MASTER-PROMPT.md
 ├── AI_SECURITY_COPILOT_2_1-1ppdkbstc7no5rj61t8dbufn3e.md
 ├── SECURITY-METRICS.md
@@ -43,6 +45,37 @@ BUSINESS → SECURITY GOALS → ASSETS → DATA FLOWS → TRUST BOUNDARIES
 ```
 
 Use `REPOSITORY-MAP.md` as the canonical navigation map. `SECURITY-METRICS.md` defines the 12-axis measurement model and repository KPIs. `DEPENDENCIES.md` defines the runtime and CI dependency contract.
+
+## Runtime deployment
+
+The repository now includes a thin server/API and CLI boundary so the solution can be deployed as an internal service, analogous to the deployment model of a security analysis platform.
+
+```text
+https://security-copilot.internal
+            │
+            ▼
+   Security Copilot API
+            │
+            ▼
+ Design-by-Security engine
+```
+
+The CLI is a client of the same API:
+
+```bash
+python3 apps/cli/security_copilot.py --url http://127.0.0.1:8080 health
+```
+
+Single-node deployment:
+
+```bash
+cp .env.example .env
+# set SECURITY_COPILOT_API_TOKEN
+
+docker compose -f deployment/docker/docker-compose.yml up -d --build
+```
+
+See `docs/RUNTIME-DEPLOYMENT.md` for the API contract and hardening requirements.
 
 ## Design principles
 
@@ -78,6 +111,12 @@ Run locally with:
 bash tests/security-design-pipeline/run-pipeline.sh
 ```
 
+Runtime smoke test:
+
+```bash
+PORT=18080 bash apps/runtime-smoke.sh
+```
+
 For the process/evidence overlay:
 
 ```bash
@@ -89,124 +128,4 @@ The same gates run in GitHub Actions for `main`, integration, hardening and audi
 
 ## Presentation alignment
 
-`docs/ARCHITECTURE.md`, `docs/ENGINE-CATALOG.md`, `docs/PRESENTATION-MAP.md` and `REPOSITORY-MAP.md` translate the presentation into repository-level implementation responsibilities. The presentation's architecture is therefore represented by executable contracts, reference artifacts, adapters, measurements and CI gates rather than by documentation alone.
-
-
-## ОПИСАНИЕ НА РУССКОМ ЯЗЫКЕ:
-# РАЗРАБОТКА С УЧЕТОМ БЕЗОПАСНОСТИ
-
-## Архитектура безопасности и проектирование операционных систем
-
-Этот репозиторий реализует архитектуру, описанную в презентации **РАЗРАБОТКА С УЧЕТОМ БЕЗОПАСНОСТИ**, в виде исполняемой и тестируемой операционной модели инженерии безопасности.
-
-Он объединяет два взаимодополняющих плана:
-
-- **Design-by-Security** — проектирование безопасности «сверху вниз**: моделирование угроз, требования, контроли, валидация и security gates.
-- **Security Copilot v4** — операционный уровень SOC: IR, DFIR, hunting, detection и инженерный анализ безопасности.
-
-Эти планы намеренно разделены и связаны явными адаптерами.
-
----
-
-## Мастер-модель процесса
-
-```text
-БИЗНЕС → ЦЕЛИ БЕЗОПАСНОСТИ → АКТИВЫ → ПОТОКИ ДАННЫХ → ГРАНИЦЫ ДОВЕРИЯ
-→ ПОВЕРХНОСТЬ АТАКИ → МОДЕЛЬ УГРОЗ → ПУТИ АТАК → ТРЕБОВАНИЯ
-→ КОНТРОЛИ → АРХИТЕКТУРА → СБОРКА → ВАЛИДАЦИЯ → РАЗВЁРТЫВАНИЕ → ДЕТЕКТИРОВАНИЕ
-→ РЕАГИРОВАНИЕ → ВОССТАНОВЛЕНИЕ → ИЗВЛЕЧЕНИЕ УРОКОВ → ПЕРЕПРОЕКТИРОВАНИЕ
-```
-
-Это сквозной цикл: безопасность начинается с бизнес-целей и замыкается через операционные находки обратно в архитектуру.
-
----
-
-## Структура репозитория
-
-```text
-.
-├── .github/workflows/security-design-integration.yml
-├── design-by-security/
-├── skills/security-copilot/
-├── tests/security-design-pipeline/
-├── schemas/security-design.schema.json
-├── examples/web-api/security-design.yaml
-├── gost-compliance/
-├── docs/
-├── DESIGN-BY-SECURITY-COPILOT-2.0-MASTER-PROMPT.md
-├── AI_SECURITY_COPILOT_2_1-1ppdkbstc7no5rj61t8dbufn3e.md
-├── SECURITY-METRICS.md
-├── DEPENDENCIES.md
-├── REPOSITORY-MAP.md
-├── build-security-copilot.sh
-├── LICENSE
-└── SECURITY.md
-```
-
-- `REPOSITORY-MAP.md` — каноническая навигационная карта репозитория.
-- `SECURITY-METRICS.md` — 12-осевая модель измерений и KPI репозитория.
-- `DEPENDENCIES.md` — контракт зависимостей (runtime + CI).
-
----
-
-## Принципы проектирования
-
-- **Безопасность — свойство дизайна, а не пост-релизный патч.**
-- Процесс начинается с **бизнес-контекста и доказательств**, а не с выбора технологий.
-- Критические пути атаки должны иметь покрытие **предотвращение + детектирование + реагирование + восстановление** либо явный зазор детектирования.
-- Неизвестное сохраняется как **unknown** и никогда молчаливо не превращается в «доказанное**.
-
-Контроли оцениваются по цепочке:
-
-```text
-EXISTS → CONFIGURED → EFFECTIVE → TESTED
-```
-
-Соответствие стандартам (compliance) не считается доказательством реальной безопасности.
-
----
-
-## Обратная связь (feedback loop)
-
-Операционные находки возвращаются в архитектуру через:
-
-```text
-НАБЛЮДЕНИЕ → НАХОДКА → ПРИЧИНА → ДОЛГ ПО БЕЗОПАСНОСТИ / ПРОЕКТНЫЙ ДЕФЕКТ
-→ ИЗМЕНЕНИЕ ТРЕБОВАНИЙ ИЛИ КОНТРОЛЕЙ → ВАЛИДАЦИЯ → ПЕРЕПРОЕКТИРОВАНИЕ
-```
-
-Деструктивные действия реагирования требуют **ручного подтверждения**.
-
----
-
-## Машиночитаемый контракт
-
-- Набор обязательных артефактов определён в `tests/security-design-pipeline/pipeline-manifest.yml`.
-- Человекочитаемое пояснение — в `docs/SECURITY-DESIGN-CONTRACT.md`.
-- Форма машиночитаемого артефакта — в `schemas/security-design.schema.json`.
-- Референсный артефакт для веб-API — в `examples/web-api/`.
-
----
-
-## Валидация интеграции
-
-Локальный запуск:
-
-```bash
-bash tests/security-design-pipeline/run-pipeline.sh
-```
-
-Для наложения процесса/доказательств:
-
-```bash
-bash gost-compliance/pipeline/gost-validate.sh
-bash gost-compliance/pipeline/evidence-package.sh ./evidence-output/package
-```
-
-Те же гейты выполняются в GitHub Actions для веток `main`, интеграционных/харденинг/аудит и для pull request в `main`.
-
----
-
-## Соответствие презентации
-
-Файлы `docs/ARCHITECTURE.md`, `docs/ENGINE-CATALOG.md`, `docs/PRESENTATION-MAP.md` и `REPOSITORY-MAP.md` транслируют презентацию в ответственность на уровне репозитория. Таким образом, архитектура презентации представлена **исполняемыми контрактами, референсными артефактами, адаптерами, измерениями и CI-гейтами**, а не только документацией.
+`docs/ARCHITECTURE.md`, `docs/ENGINE-CATALOG.md`, `docs/PRESENTATION-MAP.md` and `REPOSITORY-MAP.md` translate the presentation into repository-level implementation responsibilities. The presentation's architecture is therefore represented by executable contracts, reference artifacts, adapters, measurements, runtime interfaces and CI gates rather than by documentation alone.

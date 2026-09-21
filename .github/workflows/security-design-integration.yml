@@ -2,7 +2,7 @@ name: Security Design Integration
 
 on:
   push:
-    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'devwebsec-claudefix-security-copilot-integration', 'feat/**']
+    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'devwebsec-claudefix-security-copilot-integration', 'feat/**', 'feature/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -38,8 +38,12 @@ jobs:
           bash -n tests/security-design-pipeline/run-pipeline.sh
           bash -n gost-compliance/pipeline/gost-validate.sh
           bash -n gost-compliance/pipeline/evidence-package.sh
-          python3 -m py_compile tests/security-design-pipeline/semantic/*.py tests/security-design-pipeline/graph/*.py
+          python3 -m py_compile apps/server/server.py apps/cli/security_copilot.py tests/security-design-pipeline/semantic/*.py tests/security-design-pipeline/graph/*.py
           python3 -m json.tool schemas/security-design.schema.json >/dev/null
+
+      - name: Runtime API smoke test
+        run: |
+          PORT=18080 bash apps/runtime-smoke.sh
 
       - name: Validate skill archive, contracts and scenarios
         run: |
@@ -64,7 +68,8 @@ jobs:
           path: |
             pipeline.log
             gost-validation.log
+            /tmp/security-copilot-runtime.log
             evidence-output/*.zip
             evidence-output/*.sha256
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30

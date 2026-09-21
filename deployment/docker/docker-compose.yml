@@ -1,0 +1,18 @@
+services:
+  security-copilot:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    container_name: security-copilot
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      SECURITY_COPILOT_DB: /opt/security-copilot/data/security-copilot.db
+      SECURITY_COPILOT_API_TOKEN: ${SECURITY_COPILOT_API_TOKEN:-}
+    volumes:
+      - security_copilot_data:/opt/security-copilot/data
+
+volumes:
+  security_copilot_data:
