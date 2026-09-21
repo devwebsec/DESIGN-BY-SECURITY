@@ -45,10 +45,28 @@ jobs:
         run: |
           PORT=18080 bash apps/runtime-smoke.sh
 
-      - name: Validate Docker image
+      - name: Validate Docker image and runtime
+        env:
+          CI_RUNTIME_TOKEN: ci-test-token
         run: |
+          set -euo pipefail
           docker build --file deployment/docker/Dockerfile --tag security-copilot:ci .
           docker image inspect security-copilot:ci >/dev/null
+          docker run --rm -d --name security-copilot-ci \
+            -p 18081:8080 \
+            -e SECURITY_COPILOT_REQUIRE_AUTH=true \
+            -e SECURITY_COPILOT_API_TOKEN="$CI_RUNTIME_TOKEN" \
+            security-copilot:ci >/tmp/security-copilot-container-id
+          cleanup() { docker logs security-copilot-ci || true; docker rm -f security-copilot-ci >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:18081/health >/dev/null 2>&1 && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:18081/health >/dev/null
+          test "$(curl -sS -o /tmp/container-unauthorized.json -w '%{http_code}' http://127.0.0.1:18081/api/v1/projects)" = "401"
+          curl -fsS -H "Authorization: Bearer $CI_RUNTIME_TOKEN" http://127.0.0.1:18081/api/v1/projects >/tmp/container-authorized.json
+          grep -q '"projects"' /tmp/container-authorized.json
 
       - name: Validate skill archive, contracts and scenarios
         run: |
