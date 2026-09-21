@@ -91,15 +91,17 @@ The same gates run in GitHub Actions for `main`, integration, hardening and audi
 
 `docs/ARCHITECTURE.md`, `docs/ENGINE-CATALOG.md`, `docs/PRESENTATION-MAP.md` and `REPOSITORY-MAP.md` translate the presentation into repository-level implementation responsibilities. The presentation's architecture is therefore represented by executable contracts, reference artifacts, adapters, measurements and CI gates rather than by documentation alone.
 
-# DESIGN-BY-SECURITY (РАЗРАБОТКА С УЧЕТОМ БЕЗОПАСНОСТИ)
+
+## ОПИСАНИЕ НА РУССКОМ ЯЗЫКЕ:
+# РАЗРАБОТКА С УЧЕТОМ БЕЗОПАСНОСТИ
 
 ## Архитектура безопасности и проектирование операционных систем
 
-Этот репозиторий реализует архитектуру, описанную в презентации **Design-by-Security**, в виде исполняемой и тестируемой операционной модели инженерии безопасности.
+Этот репозиторий реализует архитектуру, описанную в презентации **РАЗРАБОТКА С УЧЕТОМ БЕЗОПАСНОСТИ**, в виде исполняемой и тестируемой операционной модели инженерии безопасности.
 
 Он объединяет два взаимодополняющих плана:
 
-- **Design-by-Security** — проектирование безопасности «сверху вниз**: threat modeling, требования, контроли, валидация и security gates.
+- **Design-by-Security** — проектирование безопасности «сверху вниз**: моделирование угроз, требования, контроли, валидация и security gates.
 - **Security Copilot v4** — операционный уровень SOC: IR, DFIR, hunting, detection и инженерный анализ безопасности.
 
 Эти планы намеренно разделены и связаны явными адаптерами.
