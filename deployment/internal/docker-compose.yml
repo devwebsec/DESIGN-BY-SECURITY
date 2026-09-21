@@ -1,0 +1,44 @@
+services:
+  security-copilot:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: "8080"
+      SECURITY_COPILOT_DB: /opt/security-copilot/data/security-copilot.db
+      SECURITY_COPILOT_REQUIRE_AUTH: "true"
+      SECURITY_COPILOT_API_TOKEN: ${SECURITY_COPILOT_API_TOKEN:?SECURITY_COPILOT_API_TOKEN must be set}
+    volumes:
+      - security_copilot_data:/opt/security-copilot/data
+    expose:
+      - "8080"
+    networks:
+      - copilot
+
+  gateway:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      security-copilot:
+        condition: service_started
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SECURITY_COPILOT_HOST: ${SECURITY_COPILOT_HOST:-security-copilot.internal}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - copilot
+
+volumes:
+  security_copilot_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  copilot:
+    driver: bridge
