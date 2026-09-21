@@ -7,6 +7,7 @@ boundary for Web UI, CLI and integrations.
 """
 from __future__ import annotations
 
+import hmac
 import json
 import os
 import sqlite3
@@ -20,7 +21,11 @@ from urllib.parse import urlparse
 ROOT = Path(__file__).resolve().parents[2]
 DB_PATH = Path(os.getenv("SECURITY_COPILOT_DB", ROOT / "data" / "security-copilot.db"))
 API_TOKEN = os.getenv("SECURITY_COPILOT_API_TOKEN", "")
+REQUIRE_AUTH = os.getenv("SECURITY_COPILOT_REQUIRE_AUTH", "false").lower() in {"1", "true", "yes", "on"}
 PORT = int(os.getenv("PORT", "8080"))
+
+if REQUIRE_AUTH and not API_TOKEN:
+    raise SystemExit("SECURITY_COPILOT_REQUIRE_AUTH is enabled but SECURITY_COPILOT_API_TOKEN is not set")
 
 sys.path.insert(0, str(ROOT / "tests" / "security-design-pipeline" / "semantic"))
 try:
@@ -66,9 +71,11 @@ class Handler(BaseHTTPRequestHandler):
         sys.stderr.write("%s - %s\n" % (self.address_string(), fmt % args))
 
     def auth(self) -> bool:
-        if not API_TOKEN:
+        if not REQUIRE_AUTH:
             return True
-        return self.headers.get("Authorization", "") == f"Bearer {API_TOKEN}"
+        supplied = self.headers.get("Authorization", "")
+        expected = f"Bearer {API_TOKEN}"
+        return hmac.compare_digest(supplied, expected)
 
     def send_json(self, status: int, obj: dict):
         raw = json.dumps(obj, ensure_ascii=False).encode("utf-8")

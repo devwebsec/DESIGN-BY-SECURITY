@@ -10,7 +10,8 @@ services:
     environment:
       PORT: "8080"
       SECURITY_COPILOT_DB: /opt/security-copilot/data/security-copilot.db
-      SECURITY_COPILOT_API_TOKEN: ${SECURITY_COPILOT_API_TOKEN:-}
+      SECURITY_COPILOT_REQUIRE_AUTH: "true"
+      SECURITY_COPILOT_API_TOKEN: ${SECURITY_COPILOT_API_TOKEN:?SECURITY_COPILOT_API_TOKEN must be set}
     volumes:
       - security_copilot_data:/opt/security-copilot/data
 

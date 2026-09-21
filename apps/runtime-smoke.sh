@@ -45,3 +45,30 @@ FAIL_PROJECT_ID=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["id"])
 FAIL_ANALYSIS=$(curl -fsS -X POST "http://127.0.0.1:${PORT}/api/v1/projects/${FAIL_PROJECT_ID}/analyze")
 grep -q '"status": "FAIL"' <<<"$FAIL_ANALYSIS"
 echo "PASS runtime API create/analyze FAIL boundary"
+
+kill "$PID"
+wait "$PID" 2>/dev/null || true
+export SECURITY_COPILOT_REQUIRE_AUTH=true
+export SECURITY_COPILOT_API_TOKEN='smoke-test-token'
+python3 apps/server/server.py > /tmp/security-copilot-runtime-auth.log 2>&1 &
+AUTH_PID=$!
+trap 'kill "$AUTH_PID" 2>/dev/null || true; rm -f "$DB"' EXIT
+
+for _ in $(seq 1 30); do
+  if curl -fsS "http://127.0.0.1:${PORT}/health" >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+if curl -sS -o /tmp/security-copilot-unauthorized.json -w '%{http_code}' "http://127.0.0.1:${PORT}/api/v1/projects" | grep -q '^401$'; then
+  echo "PASS runtime authentication rejects missing bearer token"
+else
+  echo "FAIL runtime authentication accepted missing bearer token"
+  cat /tmp/security-copilot-runtime-auth.log 2>/dev/null || true
+  exit 1
+fi
+
+curl -fsS -H 'Authorization: Bearer smoke-test-token' "http://127.0.0.1:${PORT}/api/v1/projects" >/tmp/security-copilot-authorized.json
+grep -q '"projects"' /tmp/security-copilot-authorized.json
+echo "PASS runtime authentication accepts valid bearer token"
