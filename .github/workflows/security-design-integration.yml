@@ -68,7 +68,8 @@ jobs:
           path: |
             pipeline.log
             gost-validation.log
+            /tmp/security-copilot-runtime.log
             evidence-output/*.zip
             evidence-output/*.sha256
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 30
