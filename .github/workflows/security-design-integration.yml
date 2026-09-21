@@ -2,7 +2,7 @@ name: Security Design Integration
 
 on:
   push:
-    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'devwebsec-claudefix-security-copilot-integration', 'feat/**', 'feature/**']
+    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'devwebsec-claudefix-security-copilot-integration', 'feat/**', 'feature/**', 'deploy/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -40,6 +40,22 @@ jobs:
           bash -n gost-compliance/pipeline/evidence-package.sh
           python3 -m py_compile apps/server/server.py apps/cli/security_copilot.py tests/security-design-pipeline/semantic/*.py tests/security-design-pipeline/graph/*.py
           python3 -m json.tool schemas/security-design.schema.json >/dev/null
+
+      - name: Validate internal deployment configuration
+        run: |
+          set -euo pipefail
+          test -f deployment/internal/docker-compose.yml
+          test -f deployment/internal/Caddyfile
+          test -f deployment/internal/.env.example
+          test -f deployment/internal/README.md
+          test -f .gitignore
+          ! grep -nE 'SECURITY_COPILOT_API_TOKEN=(?!replace-with-a-long-random-token)' deployment/internal/.env.example 2>/dev/null || true
+          docker compose --env-file deployment/internal/.env.example -f deployment/internal/docker-compose.yml config >/tmp/security-copilot-compose.yml
+          grep -q 'caddy:2.10-alpine' /tmp/security-copilot-compose.yml
+          grep -q 'security-copilot' /tmp/security-copilot-compose.yml
+          grep -q '443:443' /tmp/security-copilot-compose.yml
+          grep -q 'tls internal' deployment/internal/Caddyfile
+          grep -q 'reverse_proxy security-copilot:8080' deployment/internal/Caddyfile
 
       - name: Runtime API smoke test
         run: |
