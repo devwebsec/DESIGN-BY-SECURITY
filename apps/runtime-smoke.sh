@@ -65,7 +65,7 @@ if curl -sS -o /tmp/security-copilot-unauthorized.json -w '%{http_code}' "http:/
   echo "PASS runtime authentication rejects missing bearer token"
 else
   echo "FAIL runtime authentication accepted missing bearer token"
-  cat /tmp/security-copilot-auth.log 2>/dev/null || true
+  cat /tmp/security-copilot-runtime-auth.log 2>/dev/null || true
   exit 1
 fi
 
