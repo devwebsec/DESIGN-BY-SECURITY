@@ -1,0 +1,2 @@
+# Runtime intentionally uses only Python standard library in v0.1.
+# Keep this file as the dependency boundary for future API/UI layers.
