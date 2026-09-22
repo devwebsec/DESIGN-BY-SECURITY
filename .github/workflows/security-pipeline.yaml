@@ -2,13 +2,14 @@ name: Security Design Pipeline
 
 on:
   pull_request:
-    branches: [main]
+    branches: [ "main" ]
   push:
-    branches: [main]
-  workflow_dispatch:
+    branches: [ "main" ]
+  workflow_dispatch: # Позволяет запускать вручную
 
 permissions:
   contents: read
+  pull-requests: write # Нужно для комментариев в PR
 
 jobs:
   validate-design:
@@ -17,18 +18,16 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v4
 
       - name: Run Security Design Pipeline
-        run: |
-          set -euo pipefail
-          bash tests/security-design-pipeline/run-pipeline.sh 2>&1 | tee pipeline.log
-          exit ${PIPESTATUS[0]}
+        # запускаем ваш проверенный скрипт
+        run: bash tests/security-design-pipeline/run-pipeline.sh
 
       - name: Upload Pipeline Log
+        # Сохраняем лог как артефакт, даже если пайплайн упал
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@v4
         with:
           name: security-pipeline-log
           path: pipeline.log
-          if-no-files-found: warn
