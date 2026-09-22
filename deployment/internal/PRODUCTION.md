@@ -54,9 +54,8 @@ Do not commit `.env` or paste the token into logs.
 
 ```bash
 cd /opt/security-copilot/repo
-depLOY=deployment/internal/deploy.sh
-chmod 750 "$depLOY"
-"$depLOY"
+chmod 750 deployment/internal/deploy.sh
+deployment/internal/deploy.sh
 ```
 
 The script builds the application image, starts the API and Caddy, and fails if
