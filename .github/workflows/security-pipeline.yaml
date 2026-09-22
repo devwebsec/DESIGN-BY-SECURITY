@@ -21,7 +21,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Security Design Pipeline
-        # Запускаем ваш проверенный скрипт
+        # запускаем ваш проверенный скрипт
         run: bash tests/security-design-pipeline/run-pipeline.sh
 
       - name: Upload Pipeline Log
