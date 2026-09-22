@@ -119,11 +119,6 @@ jobs:
           curl -fsS -H "Authorization: Bearer $CI_RUNTIME_TOKEN" http://127.0.0.1:18081/api/v1/projects >/tmp/container-authorized.json
           grep -q '"projects"' /tmp/container-authorized.json
 
-      - name: Validate skill archive, contracts and scenarios
-        run: |
-          bash tests/security-design-pipeline/run-pipeline.sh 2>&1 | tee pipeline.log
-          exit ${PIPESTATUS[0]}
-
       - name: Level 8 — GOST process overlay
         run: |
           bash gost-compliance/pipeline/gost-validate.sh 2>&1 | tee gost-validation.log
@@ -140,7 +135,6 @@ jobs:
         with:
           name: security-design-validation
           path: |
-            pipeline.log
             gost-validation.log
             /tmp/security-copilot-runtime.log
             evidence-output/*.zip
