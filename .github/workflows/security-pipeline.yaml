@@ -1,33 +1,39 @@
-name: Security Design Pipeline
+name: Security Pipeline
 
 on:
-  pull_request:
-    branches: [ "main" ]
   push:
-    branches: [ "main" ]
-  workflow_dispatch: # Позволяет запускать вручную
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
-  pull-requests: write # Нужно для комментариев в PR
+  security-events: write
 
 jobs:
-  validate-design:
-    name: Run Security Design Validation
+  trivy-scan:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Run Security Design Pipeline
-        # Запускаем ваш проверенный скрипт
-        run: bash tests/security-design-pipeline/run-pipeline.sh
+      - name: Build Docker image
+        run: docker build -t security-copilot:ci-${{ github.sha }} .
 
-      - name: Upload Pipeline Log
-        # Сохраняем лог как артефакт, даже если пайплайн упал
-        if: always()
-        uses: actions/upload-artifact@v4
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
         with:
-          name: security-pipeline-log
-          path: pipeline.log
+          image-ref: security-copilot:ci-${{ github.sha }}
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          ignore-unfixed: true
+          scan-type: image
+          version: v0.74.0
+          extra-args: --skip-version-check
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
