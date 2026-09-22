@@ -25,7 +25,8 @@ BUSINESS → SECURITY GOALS → ASSETS → DATA FLOWS → TRUST BOUNDARIES
 ```text
 .
 ├── apps/                         # runtime server + thin CLI client
-├── deployment/docker/            # single-node deployment
+├── deployment/internal/         # internal HTTPS deployment (Caddy + API)
+├── deployment/docker/            # API container image / single-node image
 ├── .github/workflows/            # CI/security verification boundary
 ├── design-by-security/           # design plane + adapters
 ├── skills/security-copilot/      # Security Copilot skill
@@ -48,10 +49,13 @@ Use `REPOSITORY-MAP.md` as the canonical navigation map. `SECURITY-METRICS.md` d
 
 ## Runtime deployment
 
-The repository now includes a thin server/API and CLI boundary so the solution can be deployed as an internal service, analogous to the deployment model of a security analysis platform.
+The runtime is deployable as an internal service:
 
 ```text
 https://security-copilot.internal
+            │
+            ▼
+     Caddy HTTPS gateway
             │
             ▼
    Security Copilot API
@@ -60,22 +64,31 @@ https://security-copilot.internal
  Design-by-Security engine
 ```
 
+The API container is **not** published directly by the internal deployment. Only the gateway publishes TCP/80 and TCP/443. The API requires bearer authentication; `/health` remains intentionally unauthenticated for health checks.
+
+### Internal deployment
+
+```bash
+cd deployment/internal
+cp .env.example .env
+chmod 600 .env
+# set SECURITY_COPILOT_API_TOKEN to a strong random secret
+
+docker compose up -d --build
+docker compose ps
+```
+
+The expected URL is `https://security-copilot.internal`. See `deployment/internal/README.md` and `docs/RUNTIME-DEPLOYMENT.md` for DNS, internal CA trust, persistence and operational hardening.
+
 The CLI is a client of the same API:
 
 ```bash
-python3 apps/cli/security_copilot.py --url http://127.0.0.1:8080 health
+SECURITY_COPILOT_URL=https://security-copilot.internal \
+SECURITY_COPILOT_API_TOKEN='<token>' \
+python3 apps/cli/security_copilot.py health
 ```
 
-Single-node deployment:
-
-```bash
-cp .env.example .env
-# set SECURITY_COPILOT_API_TOKEN
-
-docker compose -f deployment/docker/docker-compose.yml up -d --build
-```
-
-See `docs/RUNTIME-DEPLOYMENT.md` for the API contract and hardening requirements.
+For local development, the server can still be started directly on `127.0.0.1`/a development port, but an externally reachable deployment should use the internal HTTPS gateway.
 
 ## Design principles
 
