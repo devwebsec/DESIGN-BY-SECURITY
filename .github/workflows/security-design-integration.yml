@@ -50,10 +50,38 @@ jobs:
           test -f deployment/internal/README.md
           test -f .gitignore
           grep -q '^SECURITY_COPILOT_API_TOKEN=replace-with-a-long-random-token$' deployment/internal/.env.example
-          docker compose --env-file deployment/internal/.env.example -f deployment/internal/docker-compose.yml config >/tmp/security-copilot-compose.yml
-          grep -q 'caddy:2.10-alpine' /tmp/security-copilot-compose.yml
-          grep -q 'security-copilot' /tmp/security-copilot-compose.yml
-          grep -q '443:443' /tmp/security-copilot-compose.yml
+
+          docker compose --env-file deployment/internal/.env.example \
+            -f deployment/internal/docker-compose.yml config --format json >/tmp/security-copilot-compose.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          cfg = json.loads(Path('/tmp/security-copilot-compose.json').read_text())
+          services = cfg.get('services', {})
+          assert 'security-copilot' in services, 'security-copilot service missing'
+          assert 'gateway' in services, 'gateway service missing'
+
+          api = services['security-copilot']
+          gateway = services['gateway']
+
+          # API must be reachable only from the Compose network, never via a host port.
+          assert 'ports' not in api, 'API service must not publish host ports'
+          assert {'8080'} <= set(api.get('expose', [])), 'API must expose port 8080 internally'
+
+          # Gateway is the only host-facing component and must publish HTTP/HTTPS.
+          published = {
+              str(p.get('published'))
+              for p in gateway.get('ports', [])
+              if isinstance(p, dict)
+          }
+          assert {'80', '443'} <= published, f'gateway must publish 80 and 443, got {published}'
+
+          assert gateway.get('image') == 'caddy:2.10-alpine', 'unexpected gateway image'
+          assert gateway.get('environment', {}).get('SECURITY_COPILOT_HOST') == 'security-copilot.internal'
+          PY
+
           grep -q 'tls internal' deployment/internal/Caddyfile
           grep -q 'reverse_proxy security-copilot:8080' deployment/internal/Caddyfile
 
