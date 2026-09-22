@@ -1,5 +1,2 @@
-# Security Copilot Server Dependencies
-# Pinned versions for reproducible builds
-
-msgpack>=1.2.1
-setuptools>=83.0.0
+# Runtime intentionally uses only Python standard library in v0.1.
+# Keep this file as the dependency boundary for future API/UI layers.
