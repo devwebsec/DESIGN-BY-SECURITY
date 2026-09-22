@@ -2,7 +2,7 @@ name: Security Design Integration
 
 on:
   push:
-    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'devwebsec-claudefix-security-copilot-integration', 'feat/**', 'feature/**']
+    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'devwebsec-claudefix-security-copilot-integration', 'feat/**', 'feature/**', 'deploy/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -40,6 +40,50 @@ jobs:
           bash -n gost-compliance/pipeline/evidence-package.sh
           python3 -m py_compile apps/server/server.py apps/cli/security_copilot.py tests/security-design-pipeline/semantic/*.py tests/security-design-pipeline/graph/*.py
           python3 -m json.tool schemas/security-design.schema.json >/dev/null
+
+      - name: Validate internal deployment configuration
+        run: |
+          set -euo pipefail
+          test -f deployment/internal/docker-compose.yml
+          test -f deployment/internal/Caddyfile
+          test -f deployment/internal/.env.example
+          test -f deployment/internal/README.md
+          test -f .gitignore
+          grep -q '^SECURITY_COPILOT_API_TOKEN=replace-with-a-long-random-token$' deployment/internal/.env.example
+
+          docker compose --env-file deployment/internal/.env.example \
+            -f deployment/internal/docker-compose.yml config --format json >/tmp/security-copilot-compose.json
+
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          cfg = json.loads(Path('/tmp/security-copilot-compose.json').read_text())
+          services = cfg.get('services', {})
+          assert 'security-copilot' in services, 'security-copilot service missing'
+          assert 'gateway' in services, 'gateway service missing'
+
+          api = services['security-copilot']
+          gateway = services['gateway']
+
+          # API must be reachable only from the Compose network, never via a host port.
+          assert 'ports' not in api, 'API service must not publish host ports'
+          assert {'8080'} <= set(api.get('expose', [])), 'API must expose port 8080 internally'
+
+          # Gateway is the only host-facing component and must publish HTTP/HTTPS.
+          published = {
+              str(p.get('published'))
+              for p in gateway.get('ports', [])
+              if isinstance(p, dict)
+          }
+          assert {'80', '443'} <= published, f'gateway must publish 80 and 443, got {published}'
+
+          assert gateway.get('image') == 'caddy:2.10-alpine', 'unexpected gateway image'
+          assert gateway.get('environment', {}).get('SECURITY_COPILOT_HOST') == 'security-copilot.internal'
+          PY
+
+          grep -q 'tls internal' deployment/internal/Caddyfile
+          grep -q 'reverse_proxy security-copilot:8080' deployment/internal/Caddyfile
 
       - name: Runtime API smoke test
         run: |
