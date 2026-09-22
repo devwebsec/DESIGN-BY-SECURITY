@@ -1,0 +1,33 @@
+name: Security Design Pipeline
+
+on:
+  pull_request:
+    branches: [ "main" ]
+  push:
+    branches: [ "main" ]
+  workflow_dispatch: # Позволяет запускать вручную
+
+permissions:
+  contents: read
+  pull-requests: write # Нужно для комментариев в PR
+
+jobs:
+  validate-design:
+    name: Run Security Design Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Security Design Pipeline
+        # Запускаем ваш проверенный скрипт
+        run: bash tests/security-design-pipeline/run-pipeline.sh
+
+      - name: Upload Pipeline Log
+        # Сохраняем лог как артефакт, даже если пайплайн упал
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-pipeline-log
+          path: pipeline.log
