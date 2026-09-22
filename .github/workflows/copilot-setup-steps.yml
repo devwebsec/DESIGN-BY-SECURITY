@@ -1,0 +1,65 @@
+# .github/workflows/copilot-setup-steps.yml
+# Этот workflow запускается GitHub Copilot coding agent перед началом работы.
+# Он НЕ является частью вашего CI/CD — это только подготовка окружения для Copilot.
+
+name: Copilot Setup Steps
+
+on:
+  workflow_dispatch:  # Ручной запуск для отладки
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f apps/server/requirements.txt ]; then pip install -r apps/server/requirements.txt; fi
+
+      - name: Validate shell scripts
+        run: |
+          bash -n build-security-copilot.sh
+          bash -n tests/security-design-pipeline/run-pipeline.sh
+          bash -n gost-compliance/pipeline/gost-validate.sh
+          bash -n gost-compliance/pipeline/evidence-package.sh
+
+      - name: Compile Python sources
+        run: |
+          python -m py_compile apps/server/server.py apps/cli/security_copilot.py
+          python -m py_compile tests/security-design-pipeline/semantic/*.py
+          python -m py_compile tests/security-design-pipeline/graph/*.py
+
+      - name: Build Docker image (cached for Copilot)
+        run: |
+          docker build -f deployment/docker/Dockerfile -t security-copilot:latest .
+
+      - name: Smoke test API
+        env:
+          SECURITY_COPILOT_REQUIRE_AUTH: "true"
+          SECURITY_COPILOT_API_TOKEN: "copilot-test-token"
+        run: |
+          docker run -d --name sc-test -p 8080:8080 \
+            -e SECURITY_COPILOT_REQUIRE_AUTH=true \
+            -e SECURITY_COPILOT_API_TOKEN="$SECURITY_COPILOT_API_TOKEN" \
+            security-copilot:latest
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8080/health && break
+            sleep 1
+          done
+          curl -f http://localhost:8080/health
+          docker rm -f sc-test
