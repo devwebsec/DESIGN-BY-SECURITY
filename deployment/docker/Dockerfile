@@ -8,6 +8,7 @@ WORKDIR /opt/security-copilot
 COPY . .
 
 RUN python -m pip install --no-cache-dir --disable-pip-version-check --upgrade "pip==26.2.0" "setuptools>=83.0.0" \
+    && find / -xdev -depth \( -iname 'setuptools-7*.dist-info' -o -iname 'setuptools-7*.egg-info' \) -exec rm -rf {} + \
     && useradd --create-home --uid 10001 copilot \
     && mkdir -p /opt/security-copilot/data \
     && chown -R copilot:copilot /opt/security-copilot
