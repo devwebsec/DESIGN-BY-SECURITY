@@ -20,7 +20,10 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Run Security Design Pipeline
-        run: bash tests/security-design-pipeline/run-pipeline.sh
+        run: |
+          set -euo pipefail
+          bash tests/security-design-pipeline/run-pipeline.sh 2>&1 | tee pipeline.log
+          exit ${PIPESTATUS[0]}
 
       - name: Upload Pipeline Log
         if: always()
