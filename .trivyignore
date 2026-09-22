@@ -1,8 +1,0 @@
-# GHSA-6v7p-g79w-8964 / CVE-2026-57585 (msgpack < 1.2.1, DoS via Unpacker reuse)
-# This CVE is triggered by pip's internally vendored msgpack copy (pip/_vendor/msgpack),
-# not by any package installed directly by this project. No released pip version
-# (checked up to pip 26.2) vendors a fixed msgpack (>=1.2.1). Cannot be remediated
-# from this repository until pip upstream updates its vendored dependency.
-# Re-evaluate when upgrading pip in deployment/docker/Dockerfile.
-GHSA-6v7p-g79w-8964
-CVE-2026-57585
