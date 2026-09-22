@@ -7,7 +7,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /opt/security-copilot
 COPY . .
 
-RUN useradd --create-home --uid 10001 copilot \
+RUN python -m pip install --no-cache-dir --disable-pip-version-check --upgrade "pip==26.2.0" "setuptools>=83.0.0" \
+    && useradd --create-home --uid 10001 copilot \
     && mkdir -p /opt/security-copilot/data \
     && chown -R copilot:copilot /opt/security-copilot
 USER copilot
