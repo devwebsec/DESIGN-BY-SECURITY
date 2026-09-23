@@ -7,7 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /opt/security-copilot
 COPY . .
 
+# Runtime uses only the Python standard library. Remove package-manager and
+# unrelated preinstalled Python packages so the final image does not carry
+# vulnerable unused components.
 RUN python -m pip install --no-cache-dir --disable-pip-version-check "pip==26.2.0" \
+    && python -m pip uninstall -y setuptools msgpack \
+    && python -m pip uninstall -y pip \
     && useradd --create-home --uid 10001 copilot \
     && mkdir -p /opt/security-copilot/data \
     && chown -R copilot:copilot /opt/security-copilot
