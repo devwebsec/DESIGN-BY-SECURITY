@@ -34,7 +34,9 @@ jobs:
 
       - name: Static syntax validation
         run: |
+          set -euo pipefail
           bash -n build-security-copilot.sh
+          bash -n apps/runtime-smoke.sh
           bash -n tests/security-design-pipeline/run-pipeline.sh
           bash -n gost-compliance/pipeline/gost-validate.sh
           bash -n gost-compliance/pipeline/evidence-package.sh
@@ -65,25 +67,13 @@ jobs:
 
           api = services['security-copilot']
           gateway = services['gateway']
-
-          # API must be reachable only from the Compose network, never via a host port.
           assert 'ports' not in api, 'API service must not publish host ports'
           assert {'8080'} <= set(api.get('expose', [])), 'API must expose port 8080 internally'
-          healthcheck = api.get('healthcheck', {})
-          assert healthcheck.get('test'), 'API healthcheck must be defined'
-
-          # Gateway must wait for a healthy API before accepting traffic.
+          assert api.get('healthcheck', {}).get('test'), 'API healthcheck must be defined'
           dependency = gateway.get('depends_on', {}).get('security-copilot', {})
           assert dependency.get('condition') == 'service_healthy', 'gateway must depend on API health'
-
-          # Gateway is the only host-facing component and must publish HTTP/HTTPS.
-          published = {
-              str(p.get('published'))
-              for p in gateway.get('ports', [])
-              if isinstance(p, dict)
-          }
+          published = {str(p.get('published')) for p in gateway.get('ports', []) if isinstance(p, dict)}
           assert {'80', '443'} <= published, f'gateway must publish 80 and 443, got {published}'
-
           assert gateway.get('image') == 'caddy:2.10-alpine', 'unexpected gateway image'
           assert gateway.get('environment', {}).get('SECURITY_COPILOT_HOST') == 'security-copilot.internal'
           PY
@@ -94,6 +84,7 @@ jobs:
 
       - name: Runtime API smoke test
         run: |
+          set -euo pipefail
           PORT=18080 bash apps/runtime-smoke.sh
 
       - name: Validate Docker image and runtime
@@ -111,7 +102,7 @@ jobs:
           cleanup() { docker logs security-copilot-ci || true; docker rm -f security-copilot-ci >/dev/null 2>&1 || true; }
           trap cleanup EXIT
           for _ in $(seq 1 30); do
-            curl -fsS http://127.0.0.1:18081/health >/dev/null 2>&1 && break
+            if curl -fsS http://127.0.0.1:18081/health >/dev/null 2>&1; then break; fi
             sleep 1
           done
           curl -fsS http://127.0.0.1:18081/health >/dev/null
@@ -121,16 +112,19 @@ jobs:
 
       - name: Validate skill archive, contracts and scenarios
         run: |
+          set -euo pipefail
           bash tests/security-design-pipeline/run-pipeline.sh 2>&1 | tee pipeline.log
           exit ${PIPESTATUS[0]}
 
       - name: Level 8 — GOST process overlay
         run: |
+          set -euo pipefail
           bash gost-compliance/pipeline/gost-validate.sh 2>&1 | tee gost-validation.log
           exit ${PIPESTATUS[0]}
 
       - name: Build audit evidence package
         run: |
+          set -euo pipefail
           mkdir -p evidence-output
           bash gost-compliance/pipeline/evidence-package.sh "$PWD/evidence-output/package"
 
