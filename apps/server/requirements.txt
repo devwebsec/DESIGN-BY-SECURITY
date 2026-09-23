@@ -1,5 +1,2 @@
-# Security Copilot Server Dependencies
-# Pinned versions for reproducible builds
-
-msgpack>=1.2.1
-setuptools>=83.0.0
+# Security Copilot server has no third-party runtime dependencies.
+# Keep this file so CI/deployment tooling has a stable dependency boundary.
