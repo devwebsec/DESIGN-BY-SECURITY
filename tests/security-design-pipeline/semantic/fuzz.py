@@ -46,6 +46,16 @@ def refs(values, target, label):
             fail(f"{label}: unknown reference {value}")
 
 
+def evidence_items(raw):
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, dict) and isinstance(raw.get("items"), list):
+        return raw["items"]
+    fail("evidence must be an array or an object containing items")
+
+
 def evaluate(d: dict) -> None:
     assets = ids(d["assets"], "assets")
     threats = ids(d["threats"], "threats")
@@ -122,7 +132,7 @@ def evaluate(d: dict) -> None:
     if gate.get("unknowns"):
         fail("unknown_presented_as_evidence: gate contains unresolved unknowns")
 
-    for evidence in d.get("evidence", []):
+    for evidence in evidence_items(d.get("evidence")):
         if not isinstance(evidence, dict) or not evidence.get("source"):
             fail("unknown_presented_as_evidence: evidence item has no source")
         if evidence["source"] not in vals and evidence["source"] not in controls and evidence["source"] not in reqs:
@@ -147,7 +157,7 @@ def operators():
         ("remove requirement validation", lambda x: x["security_requirements"][0]["validation_ids"].clear()),
         ("remove critical path detection", lambda x: x["attack_paths"][0].update(detection_ids=[], detection_gap="")),
         ("duplicate threat id", lambda x: x["threats"].append(copy.deepcopy(x["threats"][0]))),
-        ("invalid evidence", lambda x: x.setdefault("evidence", []).append({"source": "UNKNOWN-SOURCE"})),
+        ("invalid evidence", lambda x: x["evidence"]["items"].append({"source": "UNKNOWN-SOURCE"})),
         ("disable destructive HITL", lambda x: x["operational_handoff"].update(human_approval_required_for_destructive_actions=False)),
         ("remove lesson root cause", lambda x: x["lessons_learned"][0].update(root_cause="")),
         ("remove redesign feedback", lambda x: x["redesign"].clear()),
