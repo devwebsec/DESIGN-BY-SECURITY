@@ -1,4 +1,4 @@
-version: "1.0"
+version: "1.1"
 standard: "GOST R 56939-2024"
 status: "implementation-overlay"
 legal_note: "Not a certification or legal compliance determination."
@@ -35,10 +35,21 @@ processes:
     artifact: sast-tools.yml
   - id: "5.11"
     name: dynamic-analysis
-    artifact: null
+    artifact: dynamic-analysis.yml
+    subrequirements:
+      - "5.11.3.1"
+      - "5.11.3.2"
+      - "5.11.3.3"
+      - "5.11.3.4"
+      - "5.11.3.5"
+      - "5.11.3.6"
   - id: "5.12"
     name: build
-    artifact: build-tools.yml
+    artifact: secure-build.yml
+    subrequirements:
+      - "5.12.1.1"
+      - "5.12.2.1"
+      - "5.12.2.2"
   - id: "5.13"
     name: secrets-management
     artifact: secrets-inventory.yml
@@ -83,3 +94,8 @@ hard_fail:
   - broken_cross_reference
   - unknown_presented_as_evidence
   - unresolved_critical_design_flaw
+  - dynamic_analysis_processing_error_presented_as_pass
+  - required_retest_missing
+  - fuzzing_crash_without_analysis
+  - secure_build_provenance_missing
+  - secure_build_artifact_digest_missing
