@@ -54,31 +54,29 @@ def main() -> int:
     passed = 0
     total = 0
 
-    # Security-critical mutation operators: every one MUST be rejected.
     cases = [
         ("mutation.critical-threat-unlinked",
          lambda d: d["security_requirements"][0]["threat_ids"].clear(), False),
         ("mutation.requirement-validation-removed",
          lambda d: d["security_requirements"][0]["validation_ids"].clear(), False),
         ("mutation.critical-path-detection-removed",
-         lambda d: (d["attack_paths"][0].update({"detection_ids": [], "detection_gap": ""})), False),
+         lambda d: d["attack_paths"][0].update({"detection_ids": [], "detection_gap": ""}), False),
         ("mutation.gate-unresolved-flaw",
          lambda d: d["security_gate"].update({"unresolved_critical_design_flaws": ["FLAW-1"]}), False),
         ("mutation.evidence-source-invalid",
-         lambda d: d.setdefault("evidence", []).append({"id": "E-BAD", "source": "UNKNOWN-SOURCE"}), False),
+         lambda d: d["evidence"]["items"].append({"id": "E-BAD", "source": "UNKNOWN-SOURCE"}), False),
         ("mutation.destructive-action-approval-disabled",
          lambda d: d["operational_handoff"].update({"human_approval_required_for_destructive_actions": False}), False),
         ("mutation.lesson-root-cause-removed",
          lambda d: d["lessons_learned"][0].pop("root_cause", None), False),
         ("mutation.redesign-feedback-removed",
-         lambda d: d["redesign"][0].update({"source_lesson_id": "UNKNOWN-LESSON"}), False),
+         lambda d: d["redesign"].clear(), False),
         ("mutation.duplicate-threat-id",
          lambda d: d["threats"].append(copy.deepcopy(d["threats"][0])), False),
         ("mutation.requirement-control-link-broken",
          lambda d: d["controls"][0]["requirement_ids"].clear(), False),
     ]
 
-    # Metamorphic properties: benign changes MUST preserve acceptance.
     metamorphic = [
         ("metamorphic.reorder-threats",
          lambda d: d["threats"].reverse(), True),
