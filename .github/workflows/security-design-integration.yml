@@ -45,14 +45,9 @@ jobs:
         run: |
           PORT=18080 bash apps/runtime-smoke.sh
 
-      - name: Validate skill archive, contracts and scenarios
+      - name: Security design and GOST validation
         run: |
           bash tests/security-design-pipeline/run-pipeline.sh 2>&1 | tee pipeline.log
-          exit ${PIPESTATUS[0]}
-
-      - name: Level 8 — GOST process overlay
-        run: |
-          bash gost-compliance/pipeline/gost-validate.sh 2>&1 | tee gost-validation.log
           exit ${PIPESTATUS[0]}
 
       - name: Build audit evidence package
@@ -67,7 +62,6 @@ jobs:
           name: security-design-validation
           path: |
             pipeline.log
-            gost-validation.log
             /tmp/security-copilot-runtime.log
             evidence-output/*.zip
             evidence-output/*.sha256
