@@ -1,0 +1,37 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.12"
+status: "implementation-overlay"
+regulation: "gost-compliance/regulations/12-build.md"
+goals:
+  - prevent introduction of defects through unsafe code transformations
+  - preserve traceability from source revision to released artifact
+build_system:
+  name: "GitHub Actions"
+  version: "runner-defined"
+  runner: "ubuntu-24.04"
+  configuration: ".github/workflows/security-design-integration.yml"
+environment:
+  os: "Ubuntu 24.04"
+  architecture: "amd64"
+  toolchain: "record exact versions"
+  containers: "record image digest when used"
+source_integrity:
+  source_revision_required: true
+  dependency_lock_required: true
+  checksums_required: true
+transformations:
+  unsafe_transformations_forbidden: true
+  validation_required: true
+reproducibility:
+  inputs_recorded: true
+  tools_recorded: true
+  commands_recorded: true
+  artifact_digests_recorded: true
+artifacts:
+  sbom_required: true
+  provenance_required: true
+  digest_algorithm: "SHA-256"
+  signature_required_for_release: true
+tools: []
+records: []

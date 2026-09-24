@@ -1,4 +1,4 @@
-version: "1.1"
+version: "1.2"
 name: security-design-pipeline
 lifecycle:
   - DESIGN
@@ -25,6 +25,10 @@ required_artifacts:
   - security_requirements
   - controls
   - validation
+  - dynamic_analysis
+  - fuzzing
+  - secure_build
+  - evidence
   - security_gate
   - operational_handoff
   - lessons_learned
@@ -45,3 +49,8 @@ hard_fail:
   - incident_closed_without_root_cause_feedback
   - missing_required_process_artifact
   - broken_cross_reference
+  - dynamic_analysis_processing_error_presented_as_pass
+  - required_retest_missing
+  - fuzzing_crash_without_analysis
+  - secure_build_provenance_missing
+  - secure_build_artifact_digest_missing
