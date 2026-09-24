@@ -51,7 +51,7 @@ jobs:
           test -f deployment/internal/.env.example
           test -f deployment/internal/README.md
           test -f .gitignore
-          grep -q '^SECURITY_COPILOT_API_TOKEN=replace-with-a-long-random-token$' deployment/internal/.env.example
+          grep -Fqx 'SECURITY_COPILOT_API_TOKEN=replace-with-a-long-random-token' deployment/internal/.env.example
 
           docker compose --env-file deployment/internal/.env.example \
             -f deployment/internal/docker-compose.yml config --format json >/tmp/security-copilot-compose.json
@@ -76,11 +76,16 @@ jobs:
           assert {'80', '443'} <= published, f'gateway must publish 80 and 443, got {published}'
           assert gateway.get('image') == 'caddy:2.10-alpine', 'unexpected gateway image'
           assert gateway.get('environment', {}).get('SECURITY_COPILOT_HOST') == 'security-copilot.internal'
-          PY
 
-          grep -q 'tls internal' deployment/internal/Caddyfile
-          grep -q 'reverse_proxy security-copilot:8080' deployment/internal/Caddyfile
-          grep -q 'redir https://' deployment/internal/Caddyfile
+          caddy = Path('deployment/internal/Caddyfile').read_text()
+          required_caddy_fragments = (
+              'tls internal',
+              'reverse_proxy security-copilot:8080',
+              'redir https://',
+          )
+          missing = [fragment for fragment in required_caddy_fragments if fragment not in caddy]
+          assert not missing, f'Caddyfile missing required fragments: {missing}'
+          PY
 
       - name: Runtime API smoke test
         run: |
