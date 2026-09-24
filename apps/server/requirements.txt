@@ -1,2 +1,2 @@
-# Runtime intentionally uses only Python standard library in v0.1.
-# Keep this file as the dependency boundary for future API/UI layers.
+# Security Copilot server has no third-party runtime dependencies.
+# Keep this file so CI/deployment tooling has a stable dependency boundary.
