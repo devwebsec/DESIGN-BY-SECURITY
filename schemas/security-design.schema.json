@@ -3,7 +3,7 @@
   "$id": "https://github.com/devwebsec/DESIGN-BY-SECURITY/blob/main/schemas/security-design.schema.json",
   "title": "Design-by-Security Security Design Artifact",
   "type": "object",
-  "required": ["intent", "architecture", "assets", "data_flows", "trust_boundaries", "threat_model", "attack_paths", "security_requirements", "controls", "validation", "security_gate", "operational_handoff", "lessons_learned", "redesign"],
+  "required": ["intent", "architecture", "assets", "data_flows", "trust_boundaries", "threat_model", "attack_paths", "security_requirements", "controls", "validation", "security_gate", "operational_handoff", "lessons_learned", "redesign", "dynamic_analysis", "fuzzing", "secure_build", "evidence"],
   "properties": {
     "intent": {"type": "object", "required": ["business_objective", "scope"]},
     "architecture": {"type": "object", "required": ["components", "dependencies"]},
@@ -18,7 +18,23 @@
     "security_gate": {"type": "object", "required": ["decision", "residual_risk"]},
     "operational_handoff": {"type": "object"},
     "lessons_learned": {"type": "array"},
-    "redesign": {"type": "array"}
+    "redesign": {"type": "array"},
+    "dynamic_analysis": {
+      "type": "object",
+      "required": ["regulation", "roles", "tool_selection", "methods", "module_selection", "failure_handling", "remediation", "periodicity", "tools", "modules", "scenarios", "reports"]
+    },
+    "fuzzing": {
+      "type": "object",
+      "required": ["campaigns", "periodicity", "completion_criteria", "reports"]
+    },
+    "secure_build": {
+      "type": "object",
+      "required": ["regulation", "build_system", "source_integrity", "transformations", "environment", "reproducibility", "artifacts", "gate"]
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["manifest", "items"]
+    }
   },
   "$defs": {
     "id_object": {
@@ -26,6 +42,22 @@
       "required": ["id"],
       "properties": {"id": {"type": "string"}},
       "additionalProperties": true
+    },
+    "tool": {
+      "type": "object",
+      "required": ["id", "name", "version", "type", "compatibility", "runtime"]
+    },
+    "module": {
+      "type": "object",
+      "required": ["id", "name", "identifier"]
+    },
+    "scenario": {
+      "type": "object",
+      "required": ["id", "module_id", "tool_id", "parameters", "start_criteria", "stop_criteria"]
+    },
+    "evidence_item": {
+      "type": "object",
+      "required": ["id", "type", "source", "sha256", "created_at"]
     }
   }
 }
