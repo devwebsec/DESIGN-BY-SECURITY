@@ -11,12 +11,21 @@ if len(sys.argv) != 3:
 valid = Path(sys.argv[1]); out = Path(sys.argv[2]); out.mkdir(parents=True, exist_ok=True)
 base = json.loads(valid.read_text(encoding="utf-8"))
 
+
+def append_bad_evidence(d):
+    evidence = d.setdefault("evidence", {"manifest": "evidence/manifest.json", "items": []})
+    if isinstance(evidence, dict):
+        evidence.setdefault("items", []).append({"id": "E-BAD", "source": "UNKNOWN-SOURCE"})
+    else:
+        evidence.append({"id": "E-BAD", "source": "UNKNOWN-SOURCE"})
+
+
 cases = {
     "critical-threat-without-requirement.json": lambda d: d["security_requirements"][0]["threat_ids"].clear(),
     "requirement-without-validation.json": lambda d: d["security_requirements"][0]["validation_ids"].clear(),
     "critical-path-without-detection-or-gap.json": lambda d: d["attack_paths"][0].update({"detection_ids": [], "detection_gap": ""}),
     "unresolved-critical-design-flaw.json": lambda d: d["security_gate"].update({"unresolved_critical_design_flaws": ["FLAW-1"]}),
-    "unknown-presented-as-evidence.json": lambda d: d.setdefault("evidence", []).append({"id":"E-BAD","source":"UNKNOWN-SOURCE"}),
+    "unknown-presented-as-evidence.json": append_bad_evidence,
     "destructive-action-without-human-approval.json": lambda d: d["operational_handoff"].update({"human_approval_required_for_destructive_actions": False}),
     "incident-without-root-cause.json": lambda d: d["lessons_learned"][0].pop("root_cause", None),
     "broken-redesign-feedback.json": lambda d: d["redesign"][0].update({"source_lesson_id":"UNKNOWN-LESSON"}),
