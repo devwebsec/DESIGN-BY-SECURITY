@@ -7,18 +7,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /opt/security-copilot
 COPY . .
 
-# Runtime uses only the Python standard library. Remove package-manager and
-# unrelated preinstalled Python packages so the final image does not carry
-# vulnerable unused components.
-RUN python -m pip install --no-cache-dir --disable-pip-version-check "pip==26.2.0" \
-    && python -m pip uninstall -y setuptools msgpack \
-    && python -m pip uninstall -y pip \
-    && useradd --create-home --uid 10001 copilot \
+# The runtime has no third-party Python dependencies. Keep the base image
+# untouched rather than downloading and removing package-manager components.
+RUN useradd --create-home --uid 10001 copilot \
     && mkdir -p /opt/security-copilot/data \
     && chown -R copilot:copilot /opt/security-copilot
 USER copilot
 
 EXPOSE 8080
-HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"
 
 CMD ["python", "apps/server/server.py"]
