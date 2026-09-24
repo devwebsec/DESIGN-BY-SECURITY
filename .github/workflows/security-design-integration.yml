@@ -2,7 +2,7 @@ name: Security Design Integration
 
 on:
   push:
-    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'devwebsec-claudefix-security-copilot-integration', 'feat/**', 'feature/**', 'deploy/**']
+    branches: [main, 'integrate/**', 'hardening/**', 'audit/**', 'feat/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -51,7 +51,7 @@ jobs:
           test -f deployment/internal/.env.example
           test -f deployment/internal/README.md
           test -f .gitignore
-          grep -Fqx 'SECURITY_COPILOT_API_TOKEN=replace-with-a-long-random-token' deployment/internal/.env.example
+          grep -Fqx 'SECURITY_COPILOT_API_TOKEN=replace-with-a-strong-random-secret' deployment/internal/.env.example
 
           docker compose --env-file deployment/internal/.env.example \
             -f deployment/internal/docker-compose.yml config --format json >/tmp/security-copilot-compose.json
