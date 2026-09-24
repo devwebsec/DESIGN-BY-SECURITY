@@ -1,3 +1,29 @@
-version: "1.0"
+version: "1.1"
+standard: "GOST R 56939-2024"
+process: "5.17"
+related_process: "5.11"
+status: "implementation-overlay"
+periodicity:
+  nightly: true
+  each_release: true
+  after_security_fix: true
+completion_criteria:
+  - duration_budget_completed
+  - crashes_triaged
+  - unique_execution_paths_recorded
+  - reproducers_archived
+  - critical_findings_fixed_retested_or_explicitly_accepted
 targets: []
-# component, interface, property, input_space, owner, last_run, result
+reports:
+  required_fields:
+    - campaign_id
+    - module_id
+    - tool_name
+    - tool_version
+    - duration_seconds
+    - crash_count
+    - unique_paths
+    - analyzed_crashes
+    - corpus_reference
+    - result
+# target fields: component, interface, property, input_space, owner, last_run, result
