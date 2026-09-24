@@ -45,9 +45,9 @@
   "evidence": {
     "manifest": "evidence/manifest.json",
     "items": [
-      {"id": "E-001", "type": "dynamic-analysis-report", "source": "evidence/dynamic-analysis/", "sha256": "RECORDED-BY-PIPELINE", "created_at": "CI_TIMESTAMP"},
-      {"id": "E-002", "type": "fuzzing-report", "source": "evidence/fuzzing/", "sha256": "RECORDED-BY-PIPELINE", "created_at": "CI_TIMESTAMP"},
-      {"id": "E-003", "type": "secure-build-record", "source": "evidence/build/", "sha256": "RECORDED-BY-PIPELINE", "created_at": "CI_TIMESTAMP"}
+      {"id": "E-001", "type": "dynamic-analysis-report", "source": "V-001", "path": "evidence/dynamic-analysis/", "sha256": "RECORDED-BY-PIPELINE", "created_at": "CI_TIMESTAMP"},
+      {"id": "E-002", "type": "fuzzing-report", "source": "V-001", "path": "evidence/fuzzing/", "sha256": "RECORDED-BY-PIPELINE", "created_at": "CI_TIMESTAMP"},
+      {"id": "E-003", "type": "secure-build-record", "source": "V-001", "path": "evidence/build/", "sha256": "RECORDED-BY-PIPELINE", "created_at": "CI_TIMESTAMP"}
     ]
   },
   "security_gate": {"decision": "PASS", "unresolved_critical_design_flaws": [], "unknowns": []},
