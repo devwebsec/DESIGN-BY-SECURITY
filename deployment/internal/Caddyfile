@@ -1,14 +1,14 @@
-http://{$SECURITY_COPILOT_HOST} {
-    redir https://{host}{uri} 308
-}
-
-{$SECURITY_COPILOT_HOST} {
+{$SECURITY_COPILOT_HOST:security-copilot.internal} {
     tls internal
+
+    encode gzip
 
     header {
         Cache-Control "no-store"
-        X-Content-Type-Options "nosniff"
-        Referrer-Policy "no-referrer"
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy no-referrer
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
     }
 
@@ -16,5 +16,13 @@ http://{$SECURITY_COPILOT_HOST} {
         max_size 10MB
     }
 
-    reverse_proxy security-copilot:8080
+    reverse_proxy security-copilot:8080 {
+        health_uri /health
+        health_interval 30s
+        health_timeout 3s
+    }
+}
+
+http://{$SECURITY_COPILOT_HOST:security-copilot.internal} {
+    redir https://{$SECURITY_COPILOT_HOST:security-copilot.internal}{uri} 308
 }
