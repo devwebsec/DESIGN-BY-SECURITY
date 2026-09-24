@@ -12,9 +12,46 @@
   "detections": [{"id": "D-001", "attack_path_ids": ["AP-001"], "text": "Alert on SQLi signatures and anomalous DB errors"}],
   "validations": [{"id": "V-001", "requirement_ids": ["R-001"], "control_ids": ["C-001"], "result": "pass"}],
   "validation": {"status": "PASS", "validation_ids": ["V-001"]},
+  "dynamic_analysis": {
+    "regulation": {"document": "gost-compliance/regulations/11-dynamic-analysis.md", "gost_references": ["5.11.2", "5.11.3"]},
+    "roles": {"owner": "security-engineer", "executor": "qa-security-team", "reviewer": "security-architect", "defect_owner": "development-team"},
+    "tool_selection": {"criteria": ["target compatibility", "machine-readable results", "reproducible retest"]},
+    "methods": ["dast", "authenticated_runtime_test", "negative_testing"],
+    "module_selection": {"criteria": ["trust-boundary crossing", "high-risk", "changed modules"]},
+    "failure_handling": {"events": ["crash", "hang", "timeout", "tool_failure"], "procedure": "preserve evidence, classify, remediate or recover and rerun"},
+    "remediation": {"procedure": "defect → fix → targeted retest → regression", "retest_required": true},
+    "periodicity": {"dast": "each_release", "regression": "weekly"},
+    "tools": [{"id": "DAST-001", "name": "DAST Tool", "version": "x.y.z", "type": "dast", "compatibility": "HTTP(S) API", "runtime": {"platform": "linux-amd64", "environment": "staging"}}],
+    "modules": [{"id": "M-API-001", "name": "Public API", "identifier": "src/Api"}],
+    "scenarios": [{"id": "DA-001", "module_id": "M-API-001", "tool_id": "DAST-001", "parameters": {"authenticated": true}, "start_criteria": "health check PASS", "stop_criteria": "test set complete or failure requires handling"}],
+    "reports": {"runtime_findings": {"required": true, "handling": "classify and retest"}, "processing_errors": {"required": true, "handling": "not a PASS"}, "fuzzing": {"required": true, "handling": "link crash/corpus/path evidence"}}
+  },
+  "fuzzing": {
+    "campaigns": [{"id": "FZ-001", "module_id": "M-API-001", "tool_id": "DAST-001", "corpus": "tests/fuzzing/corpus/api", "seed_strategy": "regression corpus", "parameters": {"max_input_size": 4096}, "duration_limit_seconds": 3600, "crash_handling": "preserve reproducer and open defect", "stop_criteria": "time budget or critical crash"}],
+    "periodicity": {"nightly": true, "each_release": true, "after_security_fix": true},
+    "completion_criteria": ["time budget completed", "all crashes triaged", "unique paths recorded", "reproducers archived"],
+    "reports": {"duration_seconds": 3600, "crashes": 0, "unique_paths": 0, "analyzed_crashes": [], "result": "PASS"}
+  },
+  "secure_build": {
+    "regulation": {"document": "gost-compliance/regulations/12-build.md", "gost_references": ["5.12.1", "5.12.2"]},
+    "build_system": {"name": "GitHub Actions", "version": "runner-defined", "runner": "ubuntu-24.04", "configuration": ".github/workflows/security-design-integration.yml", "source_revision": "CI_COMMIT_SHA"},
+    "source_integrity": {"source_revision_required": true, "dependency_lock_required": true, "checksums_required": true},
+    "transformations": {"unsafe_transformations_forbidden": true, "validation": "record inputs and outputs"},
+    "environment": {"os": "Ubuntu 24.04", "architecture": "amd64", "toolchain": "record exact versions", "containers": "record image digest"},
+    "reproducibility": {"inputs_recorded": true, "tool_versions_recorded": true, "commands_recorded": true, "artifact_digests_recorded": true},
+    "artifacts": {"output": "deployment artifacts", "digest": "SHA-256", "signature": "release-dependent", "sbom": "required", "provenance": "required"},
+    "gate": {"decision": "PASS", "criteria": ["identified inputs", "no unsafe transformation", "digest recorded", "provenance recorded"]}
+  },
+  "evidence": {
+    "manifest": "evidence/manifest.json",
+    "items": [
+      {"id": "E-001", "type": "dynamic-analysis-report", "source": "evidence/dynamic-analysis/", "sha256": "RECORDED-BY-PIPELINE", "created_at": "CI_TIMESTAMP"},
+      {"id": "E-002", "type": "fuzzing-report", "source": "evidence/fuzzing/", "sha256": "RECORDED-BY-PIPELINE", "created_at": "CI_TIMESTAMP"},
+      {"id": "E-003", "type": "secure-build-record", "source": "evidence/build/", "sha256": "RECORDED-BY-PIPELINE", "created_at": "CI_TIMESTAMP"}
+    ]
+  },
   "security_gate": {"decision": "PASS", "unresolved_critical_design_flaws": [], "unknowns": []},
   "operational_handoff": {"attack_path_ids": ["AP-001"], "detection_ids": ["D-001"], "response_owner": "SOC", "human_approval_required_for_destructive_actions": true},
   "lessons_learned": [{"id": "L-001", "root_cause": "Input trust boundary lacked explicit validation", "security_debt": "SD-001"}],
-  "redesign": [{"id": "RD-001", "source_lesson_id": "L-001", "changes": ["strengthen API validation", "add regression test"]}],
-  "evidence": [{"id": "E-001", "type": "documented", "claim": "SQL injection control validated", "source": "V-001"}]
+  "redesign": [{"id": "RD-001", "source_lesson_id": "L-001", "changes": ["strengthen API validation", "add regression test"]}]
 }
