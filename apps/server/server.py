@@ -158,19 +158,19 @@ class Handler(BaseHTTPRequestHandler):
             return
         if not self.require_auth_or_return():
             return
-        try:
-            body = self.read_json()
-        except OverflowError as exc:
-            self.send_json(413, {"error": "request_too_large", "detail": str(exc)})
-            return
-        except Exception as exc:
-            self.send_json(400, {"error": "invalid_json", "detail": str(exc)})
-            return
-        if not isinstance(body, dict):
-            self.send_json(400, {"error": "request_body_must_be_object"})
-            return
 
         if path == "/api/v1/projects":
+            try:
+                body = self.read_json()
+            except OverflowError as exc:
+                self.send_json(413, {"error": "request_too_large", "detail": str(exc)})
+                return
+            except Exception as exc:
+                self.send_json(400, {"error": "invalid_json", "detail": str(exc)})
+                return
+            if not isinstance(body, dict):
+                self.send_json(400, {"error": "request_body_must_be_object"})
+                return
             name = str(body.get("name", "")).strip()
             artifact = body.get("artifact")
             if not name or len(name) > MAX_PROJECT_NAME or not isinstance(artifact, dict):
