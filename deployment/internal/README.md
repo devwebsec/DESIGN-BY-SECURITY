@@ -1,64 +1,73 @@
 # Internal Security Copilot deployment
 
-This topology exposes the Security Copilot API only through the Caddy HTTPS gateway.
+This stack exposes the Security Copilot runtime as an internal HTTPS service:
 
-```text
-Client / CLI
-    |
-  HTTPS :443
-    |
-  Caddy
-    |
-  private Compose network
-    |
-  Security Copilot :8080
-    |
-  deterministic Design-by-Security validator
-```
+`Web UI / CLI / REST -> Caddy HTTPS gateway -> Security Copilot API -> deterministic Design-by-Security engine`
 
-## Deploy
+The API container is not published directly to the host. Only ports 80/443 are exposed by the gateway. The API keeps bearer authentication enabled.
+
+## Prerequisites
+
+- Docker Engine with Compose v2
+- internal DNS record resolving `security-copilot.internal` to the deployment host
+- network policy/firewall allowing clients to reach TCP/443
+- a deployment host with persistent storage for the SQLite volume
+
+## First deployment
 
 ```bash
 cd deployment/internal
 cp .env.example .env
 chmod 600 .env
-# edit .env and replace the placeholder token
-
-docker compose config
-# optional before startup: docker compose pull
-
+# Replace SECURITY_COPILOT_API_TOKEN with a random high-entropy value.
 docker compose up -d --build
 docker compose ps
 ```
 
-The API container has no published host port. Only TCP/80 and TCP/443 are published by Caddy.
+The API should remain reachable only through the gateway. Verify locally on the host:
 
-## DNS and TLS
+```bash
+curl -k https://security-copilot.internal/health
+```
 
-Resolve `security-copilot.internal` to the deployment host. Caddy uses its internal CA (`tls internal`). Managed clients must trust the Caddy root CA; do not use `curl -k` as an operational workaround.
+Expected response contains:
 
-For enterprise PKI, replace `tls internal` with the approved certificate/key configuration.
+```json
+{"status":"ok","service":"security-copilot","version":"0.1"}
+```
 
-## Authentication
+## Internal CA trust
 
-All `/api/v1/*` endpoints require:
+The gateway uses Caddy's internal CA (`tls internal`). This is intentional for a private service where the deployment team controls client trust. Install the Caddy root CA on managed clients rather than using `curl -k` in normal operation.
+
+The persistent `caddy_data` volume must be backed up and protected because it contains the gateway's certificate state and private CA material.
+
+## API authentication
+
+Keep the bearer token out of Git. The runtime requires:
 
 ```text
 Authorization: Bearer <SECURITY_COPILOT_API_TOKEN>
 ```
 
-`GET /health` remains unauthenticated for service health checks.
+Health is intentionally unauthenticated for load balancer/container health checks. Project and analysis endpoints require authentication.
 
-Never commit `.env` or a real token. Rotate the token through the organization's secret-management process.
-
-## Persistence
-
-SQLite data is stored in the named `security_copilot_data` volume. Caddy state is stored in `caddy_data` and `caddy_config`. Back up all three volumes according to the organization's recovery requirements.
-
-## Verification
+## Operational checks
 
 ```bash
-docker compose config
 docker compose ps
-curl --fail https://security-copilot.internal/health
+docker compose logs --tail=100 gateway
+docker compose logs --tail=100 security-copilot
+curl -k https://security-copilot.internal/health
 ```
+
+For a functional API check, use the repository CLI with the service URL and token.
+
+## Production notes
+
+- Do not publish port `8080` from the API container.
+- Do not commit `.env` or real API tokens.
+- Restrict TCP/443 to trusted corporate/VPN networks.
+- Prefer a centrally managed DNS record and backup policy for the persistent volumes.
+- For enterprise PKI, replace `tls internal` with a certificate issued by the organization's CA and mount the certificate/key into the gateway.
+- This deployment does not turn the LLM/provider into the deterministic security decision-maker; the existing deterministic validator remains the PASS/FAIL boundary.
