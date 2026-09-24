@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Minimal dependency-free Security Copilot server.
-
-The server is intentionally thin: deterministic Design-by-Security validation remains
-in the repository's existing engine/tests, while this API provides a stable runtime
-boundary for Web UI, CLI and integrations.
-"""
+"""Minimal dependency-free Security Copilot server."""
 from __future__ import annotations
 
 import hmac
@@ -22,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DB_PATH = Path(os.getenv("SECURITY_COPILOT_DB", ROOT / "data" / "security-copilot.db"))
 API_TOKEN = os.getenv("SECURITY_COPILOT_API_TOKEN", "")
 REQUIRE_AUTH = os.getenv("SECURITY_COPILOT_REQUIRE_AUTH", "false").lower() in {"1", "true", "yes", "on"}
+HOST = os.getenv("SECURITY_COPILOT_HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", "8080"))
 MAX_BODY_BYTES = 10 * 1024 * 1024
 MAX_PROJECT_NAME = 200
@@ -59,7 +55,7 @@ def db():
 
 def analyze_artifact(artifact: dict) -> dict:
     if evaluate is None:
-        return {"status": "error", "error": f"validator import failed: {IMPORT_ERROR}"}
+        raise RuntimeError(f"validator import failed: {IMPORT_ERROR}")
     import tempfile
     from pathlib import Path as _Path
 
@@ -92,6 +88,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header("Referrer-Policy", "no-referrer")
+        if status == 401:
+            self.send_header("WWW-Authenticate", 'Bearer realm="security-copilot"')
         self.send_header("Content-Length", str(len(raw)))
         self.end_headers()
         self.wfile.write(raw)
@@ -105,7 +105,10 @@ class Handler(BaseHTTPRequestHandler):
         if length < 0:
             raise ValueError("invalid Content-Length")
         if length > MAX_BODY_BYTES:
-            raise ValueError("request body exceeds 10 MiB")
+            raise OverflowError("request body exceeds 10 MiB")
+        content_type = self.headers.get("Content-Type", "")
+        if not content_type.lower().startswith("application/json"):
+            raise TypeError("Content-Type must be application/json")
         return json.loads(self.rfile.read(length) or b"{}")
 
     def require_auth_or_return(self) -> bool:
@@ -157,6 +160,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             body = self.read_json()
+        except OverflowError as exc:
+            self.send_json(413, {"error": "request_too_large", "detail": str(exc)})
+            return
         except Exception as exc:
             self.send_json(400, {"error": "invalid_json", "detail": str(exc)})
             return
@@ -170,9 +176,7 @@ class Handler(BaseHTTPRequestHandler):
             if not name or len(name) > MAX_PROJECT_NAME or not isinstance(artifact, dict):
                 self.send_json(
                     400,
-                    {
-                        "error": "name and object artifact are required; name must be 1-200 characters"
-                    },
+                    {"error": "name and object artifact are required; name must be 1-200 characters"},
                 )
                 return
             pid = str(uuid.uuid4())
@@ -193,7 +197,11 @@ class Handler(BaseHTTPRequestHandler):
             if not row:
                 self.send_json(404, {"error": "project_not_found"})
                 return
-            result = analyze_artifact(json.loads(row["artifact"]))
+            try:
+                result = analyze_artifact(json.loads(row["artifact"]))
+            except RuntimeError as exc:
+                self.send_json(503, {"error": "validator_unavailable", "detail": str(exc)})
+                return
             self.send_json(200, {"project_id": pid, "analysis": result, "timestamp": now()})
             return
         self.send_json(404, {"error": "not_found"})
@@ -209,8 +217,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
-    print(f"Security Copilot server listening on 0.0.0.0:{PORT}")
-    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+    print(f"Security Copilot server listening on {HOST}:{PORT}")
+    ThreadingHTTPServer((HOST, PORT), Handler).serve_forever()
     return 0
 
 
