@@ -1,0 +1,42 @@
+services:
+  security-copilot:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    restart: unless-stopped
+    expose:
+      - "8080"
+    environment:
+      PORT: "8080"
+      SECURITY_COPILOT_DB: /opt/security-copilot/data/security-copilot.db
+      SECURITY_COPILOT_REQUIRE_AUTH: "true"
+      SECURITY_COPILOT_API_TOKEN: ${SECURITY_COPILOT_API_TOKEN:?SECURITY_COPILOT_API_TOKEN must be set}
+    volumes:
+      - security_copilot_data:/opt/security-copilot/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+      interval: 30s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+  gateway:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    depends_on:
+      security-copilot:
+        condition: service_healthy
+    environment:
+      SECURITY_COPILOT_HOST: security-copilot.internal
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  security_copilot_data:
+  caddy_data:
+  caddy_config:
