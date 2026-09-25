@@ -19,6 +19,39 @@ Each process has:
 3. validation references in `GOST-MAPPING.yml`;
 4. explicit hard-fail semantics where a missing artifact creates a material design-control gap.
 
+## 5.11 Dynamic analysis boundary
+
+The 5.11 overlay explicitly records the elements required by the supplied 5.11.3 excerpt:
+
+- roles and responsibilities;
+- tool-selection criteria, including fuzzing tools;
+- dynamic-analysis methods;
+- module/component selection criteria;
+- failure handling and remediation;
+- repeat-analysis criteria and periodicity;
+- fuzzing completion criteria;
+- tool name/version/compatibility/runtime parameters;
+- selected modules and stable identifiers;
+- per-module test scenarios with start/stop criteria;
+- dynamic-analysis findings and processing-error results;
+- fuzzing duration, abnormal terminations, unique paths and crash analysis.
+
+The machine-readable contract lives in `examples/web-api/security-design.yaml`, `gost-compliance/artifacts/dynamic-analysis.yml` and `gost-compliance/artifacts/fuzzing-targets.yml`.
+
+## 5.12 Secure build boundary
+
+The 5.12 overlay records the build regulation and fixes the build-system/environment evidence boundary:
+
+- source revision and dependency inputs;
+- build system, runner and configuration;
+- toolchain/environment versions;
+- transformation controls;
+- reproducibility inputs and commands;
+- artifact digests;
+- SBOM, provenance and release-signing state.
+
+The machine-readable contract lives in `gost-compliance/artifacts/secure-build.yml` and `gost-compliance/artifacts/build-tools.yml`.
+
 ## Validation principle
 
 ```text

@@ -40,12 +40,6 @@ Expected response contains:
 
 The gateway uses Caddy's internal CA (`tls internal`). This is intentional for a private service where the deployment team controls client trust. Install the Caddy root CA on managed clients rather than using `curl -k` in normal operation.
 
-To inspect the generated CA material:
-
-```bash
-docker compose exec gateway caddy list-certificates
-```
-
 The persistent `caddy_data` volume must be backed up and protected because it contains the gateway's certificate state and private CA material.
 
 ## API authentication

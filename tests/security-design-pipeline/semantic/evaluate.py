@@ -43,6 +43,17 @@ def refs(values, target, label):
             fail(f"{label}: unknown reference {value}")
 
 
+def evidence_items(raw):
+    """Accept the v1 list form and the v1.1 object-with-items form."""
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return raw
+    if isinstance(raw, dict) and isinstance(raw.get("items"), list):
+        return raw["items"]
+    fail("evidence must be an array or an object containing items")
+
+
 def evaluate(path: Path) -> None:
     d = load(path)
     assets = ids(d["assets"], "assets")
@@ -55,16 +66,8 @@ def evaluate(path: Path) -> None:
     lessons = ids(d["lessons_learned"], "lessons_learned")
     redesign = ids(d["redesign"], "redesign")
 
-    # ─── [FIX v2] Learning-cycle balance ────────────────────────────
-    # Контракт: Learn (lessons_learned) и Redesign (redesign) образуют
-    # замкнутый цикл. Если хоть один из них пуст, а другой — нет,
-    # цикл разорван, даже если все ссылки формально валидны.
     if bool(lessons) != bool(redesign):
-        fail(
-            "learning_redesign_imbalance: lessons_learned and redesign "
-            "must be both empty or both populated"
-        )
-    # ────────────────────────────────────────────────────────────────
+        fail("learning_redesign_imbalance: lessons_learned and redesign must be both empty or both populated")
 
     for t in threats.values():
         refs(t.get("asset_ids", []), assets, f"threat {t['id']} asset_ids")
@@ -101,8 +104,7 @@ def evaluate(path: Path) -> None:
         if not any(r["id"] in c.get("requirement_ids", []) for c in controls.values()):
             fail(f"requirement_without_control: {r['id']}")
         for vid in r.get("validation_ids", []):
-            v = vals[vid]
-            if r["id"] not in v.get("requirement_ids", []):
+            if r["id"] not in vals[vid].get("requirement_ids", []):
                 fail(f"requirement_validation_mismatch: {r['id']} -> {vid}")
 
     for c in controls.values():
@@ -128,8 +130,7 @@ def evaluate(path: Path) -> None:
     if gate.get("unknowns"):
         fail("unknown_presented_as_evidence: gate contains unresolved unknowns")
 
-    evidence = d.get("evidence", [])
-    for e in evidence:
+    for e in evidence_items(d.get("evidence")):
         if not isinstance(e, dict) or not e.get("source"):
             fail("unknown_presented_as_evidence: evidence item has no source")
         source = e["source"]

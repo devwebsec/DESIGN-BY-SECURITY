@@ -1,0 +1,47 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.11"
+status: "implementation-overlay"
+regulation: "gost-compliance/regulations/11-dynamic-analysis.md"
+roles:
+  owner: "security-engineer"
+  executor: "qa-security-team"
+  reviewer: "security-architect"
+  defect_owner: "development-team"
+tool_selection_criteria:
+  - target compatibility
+  - module/runtime compatibility
+  - deterministic configuration
+  - machine-readable evidence
+  - reproducible retest
+methods:
+  - dast
+  - authenticated_runtime_test
+  - negative_testing
+module_selection_criteria:
+  - trust-boundary crossing components
+  - high/critical-risk components
+  - changed components
+failure_handling:
+  events: [crash, hang, timeout, environment_failure, tool_failure]
+  preserve_evidence: true
+  security_pass_on_tool_failure: false
+remediation:
+  procedure: "finding -> defect -> fix -> targeted retest -> regression"
+  retest_required: true
+periodicity:
+  dast: "each_release"
+  regression: "weekly"
+tools: []
+modules: []
+scenarios: []
+reports:
+  runtime_findings_required: true
+  processing_errors_required: true
+  report_fields:
+    - tool_trigger
+    - finding_type
+    - processing_result
+    - error_handling
+    - remediation_reference
+    - retest_reference

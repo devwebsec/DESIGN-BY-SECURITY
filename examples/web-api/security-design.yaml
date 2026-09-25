@@ -1,4 +1,11 @@
-version: "1.0"
+version: "1.1"
+metadata:
+  project: "Example Web API"
+  owner: "security-team"
+  last_updated: "2026-09-24"
+  compliance:
+    - "ГОСТ Р 56939-2024"
+  release: "reference"
 intent:
   business_objective: "Provide an authenticated web API while limiting compromise impact."
   scope: "Reference architecture only"
@@ -60,6 +67,7 @@ attack_paths:
 security_requirements:
   - id: R-001
     statement: "Protected API resources must enforce server-side authorization for every request."
+    gost_references: ["5.11.3", "5.12.2"]
 controls:
   - id: C-001
     type: preventive
@@ -70,6 +78,170 @@ validation:
     requirement: R-001
     test: "Attempt access to an object outside the caller's authorization scope."
     expected: deny
+    methods: [integration_test, dast, fuzzing]
+    evidence:
+      - "evidence/dynamic-analysis/"
+      - "evidence/fuzzing/"
+
+dynamic_analysis:
+  regulation:
+    document: "gost-compliance/regulations/11-dynamic-analysis.md"
+    gost_references: ["5.11.2", "5.11.3"]
+  roles:
+    owner: "security-engineer"
+    executor: "qa-security-team"
+    reviewer: "security-architect"
+    defect_owner: "development-team"
+  tool_selection:
+    criteria:
+      - "supports the target protocol/runtime and authentication model"
+      - "supports deterministic configuration and machine-readable results"
+      - "supports failure/crash evidence and reproducible retest"
+  methods:
+    - dast
+    - authenticated_runtime_test
+    - negative_testing
+  module_selection:
+    criteria:
+      - "internet-facing or trust-boundary crossing components"
+      - "high/critical-risk components"
+      - "modules changed since the previous baseline"
+  failure_handling:
+    events: [crash, hang, timeout, environment_failure, tool_failure]
+    procedure: "stop affected test, preserve logs and reproducer, classify failure, remediate or re-run after environment recovery"
+  remediation:
+    procedure: "register finding, assign defect owner, preserve evidence, implement fix, execute targeted retest, then regression test"
+    retest_required: true
+  periodicity:
+    dast: "each_release"
+    regression: "weekly"
+  tools:
+    - id: DAST-001
+      name: "DAST Tool"
+      version: "x.y.z"
+      type: dast
+      compatibility: "HTTP(S) API / staging runtime"
+      runtime:
+        platform: linux-amd64
+        language: "runtime-defined"
+        environment: staging
+        parameters:
+          timeout_seconds: 30
+          authenticated: true
+  modules:
+    - id: M-API-001
+      name: "Public API"
+      identifier: "src/Api"
+  scenarios:
+    - id: DA-001
+      module_id: M-API-001
+      tool_id: DAST-001
+      parameters:
+        base_url: "https://staging.example.org"
+        authentication: "oidc-test-account"
+      start_criteria: "staging build deployed and health check PASS"
+      stop_criteria: "planned test set complete or crash/hang requires failure handling"
+  reports:
+    runtime_findings:
+      required: true
+      handling: "classify, preserve evidence, assign remediation, retest"
+    processing_errors:
+      required: true
+      handling: "environment/tool failure is not treated as security PASS"
+    fuzzing:
+      required: true
+      handling: "link crash, corpus, coverage/path and analysis records"
+
+fuzzing:
+  campaigns:
+    - id: FZ-001
+      module_id: M-API-001
+      tool_id: DAST-001
+      corpus: "tests/fuzzing/corpus/api"
+      seed_strategy: "production-safe protocol examples + regression corpus"
+      parameters:
+        max_input_size: 4096
+        timeout_seconds: 30
+      duration_limit_seconds: 3600
+      crash_handling: "preserve reproducer, hash, stack trace, environment and input; open defect; retest after fix"
+      stop_criteria: "time budget exhausted, target coverage plateau, or critical crash requires investigation"
+  periodicity:
+    nightly: true
+    each_release: true
+    after_security_fix: true
+  completion_criteria:
+    - "configured time budget completed"
+    - "all crashes triaged"
+    - "new unique paths recorded"
+    - "reproducers archived"
+    - "critical findings either fixed and retested or explicitly accepted through the security gate"
+  reports:
+    duration_seconds: 3600
+    crashes: 0
+    unique_paths: 0
+    analyzed_crashes: []
+    result: "PASS"
+
+secure_build:
+  regulation:
+    document: "gost-compliance/regulations/12-build.md"
+    gost_references: ["5.12.1", "5.12.2"]
+  build_system:
+    name: "GitHub Actions"
+    version: "runner-defined"
+    runner: "ubuntu-24.04"
+    configuration: ".github/workflows/security-design-integration.yml"
+    source_revision: "CI_COMMIT_SHA"
+  source_integrity:
+    source_revision_required: true
+    dependency_lock_required: true
+    checksums_required: true
+  transformations:
+    unsafe_transformations_forbidden: true
+    validation: "build output and generated artifacts must be reproducible from recorded inputs"
+  environment:
+    os: "Ubuntu 24.04"
+    architecture: "amd64"
+    toolchain: "record exact versions in build evidence"
+    containers: "record image digest when containers are used"
+  reproducibility:
+    inputs_recorded: true
+    tool_versions_recorded: true
+    commands_recorded: true
+    artifact_digests_recorded: true
+  artifacts:
+    output: "deployment artifacts / package"
+    digest: "SHA-256 required"
+    signature: "required for release artifacts where signing infrastructure is enabled"
+    sbom: "required for release artifacts"
+    provenance: "required"
+  gate:
+    decision: "PASS|FAIL|EXCEPTION"
+    criteria:
+      - "build inputs and environment are identified"
+      - "unsafe transformations are absent or justified and validated"
+      - "artifact digest is recorded"
+      - "provenance is recorded"
+
+evidence:
+  manifest: "evidence/manifest.json"
+  items:
+    - id: E-001
+      type: "dynamic-analysis-report"
+      source: "evidence/dynamic-analysis/"
+      sha256: "RECORDED-BY-PIPELINE"
+      created_at: "CI_TIMESTAMP"
+    - id: E-002
+      type: "fuzzing-report"
+      source: "evidence/fuzzing/"
+      sha256: "RECORDED-BY-PIPELINE"
+      created_at: "CI_TIMESTAMP"
+    - id: E-003
+      type: "secure-build-record"
+      source: "evidence/build/"
+      sha256: "RECORDED-BY-PIPELINE"
+      created_at: "CI_TIMESTAMP"
+
 security_gate:
   decision: APPROVE_WITH_CONDITIONS
   residual_risk: "Reference artifact; concrete deployment evidence is required."

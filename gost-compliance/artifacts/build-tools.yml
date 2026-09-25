@@ -1,3 +1,27 @@
-version: "1.0"
+version: "1.1"
+standard: "GOST R 56939-2024"
+process: "5.12"
+status: "implementation-overlay"
 tools: []
 # tool, version, build_command, runner, provenance, reproducibility
+required_record_fields:
+  - tool
+  - version
+  - build_command
+  - runner
+  - runner_image
+  - source_revision
+  - dependency_lock
+  - provenance
+  - reproducibility
+  - artifact_digest
+  - sbom
+  - signature
+environment:
+  os: "record exact version"
+  architecture: "record exact architecture"
+  toolchain: "record exact versions"
+  container_images: "record immutable digest when used"
+transformations:
+  unsafe_transformations_forbidden: true
+  validation_required: true
