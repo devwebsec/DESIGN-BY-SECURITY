@@ -1,6 +1,7 @@
-# 5.18 Release
+# 5.18 Функциональное тестирование
 
-Release approval must consider unresolved security findings, requirements, validation evidence and residual risk.
+Цель: проверить полноту функциональности и выявлять ошибки средствами функционального тестирования.
 
-Evidence: release checklist and security-gate decision.
-Gate: unresolved critical design flaw → `REDESIGN_REQUIRED`.
+Минимальный контроль: план тестирования, критерии и случаи, результаты выполнения, регистрация ошибок и подтверждение исправлений.
+
+Evidence: `gost-compliance/artifacts/functional-testing.yml`.
