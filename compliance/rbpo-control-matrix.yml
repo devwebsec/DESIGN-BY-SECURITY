@@ -1,0 +1,258 @@
+version: "1.0"
+status: "implementation-overlay"
+legal_note: "This matrix is an engineering traceability and evidence model. It is not a certification or legal compliance determination. Final applicability and evidence acceptance require qualified organizational review."
+regulatory_scope:
+  - document: "Приказ ФСТЭК России от 11.04.2025 №117"
+    clause: "50"
+    relation: "direct"
+    requirement: "For independently developed software intended for information systems, implement measures provided by sections 4 and 5 of GOST R 56939-2024."
+standard:
+  document: "ГОСТ Р 56939-2024"
+  sections: ["4", "5"]
+
+# Engineering mapping supplied for the Design-by-Security framework.
+# A mapping is marked direct only where the current repository's normative overlay
+# explicitly establishes the relationship. Other links are supporting/organizational
+# mappings and must not be presented as literal wording of Order 117.
+controls:
+  - id: RBPO-5.1
+    gost_process: "5.1"
+    name: "Планирование процессов РБПО"
+    control: "plan, scope, resources and responsible roles are defined"
+    evidence: [planning-status-analysis.yml, development-plan]
+    validation: [existence, completeness, traceability]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.2
+    gost_process: "5.2"
+    name: "Обучение сотрудников"
+    control: "security-development competencies and training records are maintained"
+    evidence: [training-log.yml]
+    validation: [training-needs, plan, completion-records]
+    fstec_117: ["20"]
+    relation: supporting
+
+  - id: RBPO-5.3
+    gost_process: "5.3"
+    name: "Формирование требований безопасности"
+    control: "security requirements and threat-model traceability are maintained"
+    evidence: [requirements-registry.yml, threat-model.yml]
+    validation: [requirements, review, change-traceability]
+    fstec_117: ["36", "50"]
+    relation: supporting
+
+  - id: RBPO-5.4
+    gost_process: "5.4"
+    name: "Управление конфигурацией"
+    control: "configuration items, versions and build composition are traceable"
+    evidence: [configuration-items.yml, secure-build.yml]
+    validation: [identity, version-traceability, change-control]
+    fstec_117: ["37", "50"]
+    relation: supporting
+
+  - id: RBPO-5.5
+    gost_process: "5.5"
+    name: "Управление недостатками"
+    control: "defects and security deficiencies are tracked through remediation"
+    evidence: [defects-registry.yml, vulnerability-response.yml]
+    validation: [severity, owner, status, remediation, retest]
+    fstec_117: ["38", "50"]
+    relation: supporting
+
+  - id: RBPO-5.6
+    gost_process: "5.6"
+    name: "Архитектура"
+    control: "security architecture decisions are reviewed and traceable"
+    evidence: [architecture.yml]
+    validation: [baseline, decisions, reviews]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.7
+    gost_process: "5.7"
+    name: "Моделирование угроз"
+    control: "threat model and attack surface are maintained"
+    evidence: [threat-model.yml]
+    validation: [assets, interfaces, attack-surface, requirements-traceability]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.8
+    gost_process: "5.8"
+    name: "Правила кодирования"
+    control: "secure coding rules are defined and enforced"
+    evidence: [coding-rules.yml]
+    validation: [scope, enforcement, review]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.9
+    gost_process: "5.9"
+    name: "Экспертиза исходного кода"
+    control: "code changes receive required security review"
+    evidence: [code-review-log.yml]
+    validation: [reviewer, change, findings, remediation, approval]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.10
+    gost_process: "5.10"
+    name: "Статический анализ"
+    control: "SAST is configured, executed and findings are processed"
+    evidence: [sast-tools.yml]
+    validation: [tool, configuration, execution, findings, retest]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.11
+    gost_process: "5.11"
+    name: "Динамический анализ"
+    control: "DAST and applicable fuzzing are planned, executed and reported"
+    evidence: [dynamic-analysis.yml, fuzzing-targets.yml]
+    validation: [methods, targets, scenarios, failure-handling, reports, retest]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.12
+    gost_process: "5.12"
+    name: "Безопасная система сборки"
+    control: "build source revision, provenance and artifact integrity are recorded"
+    evidence: [secure-build.yml]
+    validation: [source-revision, provenance, artifact-digest]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.13
+    gost_process: "5.13"
+    name: "Безопасность сборочной среды"
+    control: "build isolation, least privilege and audit events are enforced"
+    evidence: [build-tools.yml]
+    validation: [isolation, access-control, least-privilege, audit]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.14
+    gost_process: "5.14"
+    name: "Доступ и целостность исходного кода"
+    control: "source access and integrity controls are evidenced"
+    evidence: [source-code-access.yml]
+    validation: [access-model, privileged-access, integrity, auditability]
+    fstec_117: ["48", "50"]
+    relation: supporting
+
+  - id: RBPO-5.15
+    gost_process: "5.15"
+    name: "Безопасность секретов"
+    control: "secrets are inventoried, protected, rotated and exposure is handled"
+    evidence: [secrets-inventory.yml]
+    validation: [storage, access, rotation, exposure-response]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.16
+    gost_process: "5.16"
+    name: "Композиционный анализ"
+    control: "dependencies and open-source components are inventoried and assessed"
+    evidence: [dependencies-inventory.yml]
+    validation: [inventory, versions, vulnerability-analysis, remediation]
+    fstec_117: ["50", "58"]
+    relation: direct
+
+  - id: RBPO-5.17
+    gost_process: "5.17"
+    name: "Проверка цепочки поставок"
+    control: "supplied code is identified, integrity checked and screened for malware"
+    evidence: [suppliers-registry.yml]
+    validation: [supplier, integrity, malware-analysis, report]
+    fstec_117: ["50", "58"]
+    relation: direct
+
+  - id: RBPO-5.18
+    gost_process: "5.18"
+    name: "Функциональное тестирование"
+    control: "planned security-relevant functional tests are executed and retested"
+    evidence: [functional-testing.yml]
+    validation: [plan, execution, defects, retest]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.19
+    gost_process: "5.19"
+    name: "Нефункциональное тестирование"
+    control: "security properties, attack surface and architecture assumptions are tested"
+    evidence: [nonfunctional-testing.yml]
+    validation: [scope, execution, findings, remediation]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.20
+    gost_process: "5.20"
+    name: "Безопасность выпуска"
+    control: "release acceptance, unresolved findings and integrity are evaluated"
+    evidence: [release-security.yml]
+    validation: [acceptance, findings, integrity, approval, evidence]
+    fstec_117: ["39", "50"]
+    relation: supporting
+
+  - id: RBPO-5.21
+    gost_process: "5.21"
+    name: "Безопасная поставка"
+    control: "delivery integrity, channel and delivery records are controlled"
+    evidence: [secure-delivery.yml]
+    validation: [integrity, channel, documentation, record]
+    fstec_117: ["50"]
+    relation: direct
+
+  - id: RBPO-5.22
+    gost_process: "5.22"
+    name: "Сопровождение"
+    control: "support, defect intake and vulnerability communication are maintained"
+    evidence: [support.yml]
+    validation: [support-process, intake, communication, update-support]
+    fstec_117: ["71"]
+    relation: supporting
+
+  - id: RBPO-5.23
+    gost_process: "5.23"
+    name: "Реагирование на информацию об уязвимостях"
+    control: "reported vulnerabilities are assessed, prioritized, remediated and communicated"
+    evidence: [vulnerability-response.yml]
+    validation: [analysis, applicability, criticality, remediation, communication]
+    fstec_117: ["38", "50"]
+    relation: supporting
+
+  - id: RBPO-5.24
+    gost_process: "5.24"
+    name: "Поиск уязвимостей при эксплуатации"
+    control: "public sources, code and configurations are periodically checked"
+    evidence: [vulnerability-search.yml]
+    validation: [monitoring, periodicity, code-checks, configuration-checks]
+    fstec_117: ["38", "50"]
+    relation: supporting
+
+  - id: RBPO-5.25
+    gost_process: "5.25"
+    name: "Вывод ПО из эксплуатации"
+    control: "end-of-support, notification and decommissioning responsibilities are defined"
+    evidence: [decommission-plan.yml]
+    validation: [end-of-support, notification, roles, conditions]
+    fstec_117: ["50"]
+    relation: direct
+
+status_model:
+  - NOT_IMPLEMENTED
+  - IMPLEMENTED
+  - VERIFIED
+  - EFFECTIVE
+  - EXCEPTION
+
+execution_model:
+  development:
+    security_validation: non-blocking
+    findings_persisted: true
+    evidence_persisted: true
+  release:
+    security_gate: blocking
+    fail_on_mandatory_control_failure: true
+    exception_requires_authorized_approval: true
