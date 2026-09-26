@@ -42,7 +42,7 @@ jobs:
           bash -n tests/security-design-pipeline/run-pipeline.sh
           bash -n gost-compliance/pipeline/gost-validate.sh
           bash -n gost-compliance/pipeline/evidence-package.sh
-          python3 -m py_compile apps/server/server.py apps/cli/security_copilot.py tests/security-design-pipeline/semantic/*.py tests/security-design-pipeline/graph/*.py
+          python3 -m py_compile apps/server/server.py apps/cli/security_copilot.py tests/security-design-pipeline/semantic/*.py tests/security-design-pipeline/graph/*.py compliance/validate-rbpo-matrix.py
           python3 -m json.tool schemas/security-design.schema.json >/dev/null
 
       - name: Build and smoke-test runtime
@@ -79,6 +79,11 @@ jobs:
           bash gost-compliance/pipeline/gost-validate.sh 2>&1 | tee gost-validation.log
           exit ${PIPESTATUS[0]}
 
+      - name: RBPO control matrix validation
+        run: |
+          set -euo pipefail
+          python3 compliance/validate-rbpo-matrix.py 2>&1 | tee rbpo-matrix-validation.log
+
       - name: Build audit evidence package
         run: |
           set -euo pipefail
@@ -93,6 +98,8 @@ jobs:
           path: |
             pipeline.log
             gost-validation.log
+            rbpo-matrix-validation.log
+            compliance/rbpo-control-matrix.yml
             evidence-output/*.zip
             evidence-output/*.sha256
           if-no-files-found: error
