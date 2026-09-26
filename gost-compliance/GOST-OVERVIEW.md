@@ -77,3 +77,5 @@ Where a requirement cannot be proven automatically, the evidence state remains u
 ## Hard-fail principles
 
 The validator hard-fails on missing required process evidence, broken cross-references, fabricated/unknown evidence presented as proof, unresolved critical design flaws, missing required retests, unanalysed fuzzing crashes and missing secure-build provenance/digests.
+
+Validation baseline: repository main commit `9b8574022e88bac427dff6328f5c30fa1d4cee2b`; this branch adds deterministic process/artifact identity checks before merge.
