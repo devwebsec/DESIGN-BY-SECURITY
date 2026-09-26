@@ -1,94 +1,142 @@
-version: "1.1"
+version: "2.0"
 standard: "GOST R 56939-2024"
 status: "implementation-overlay"
-legal_note: "Not a certification or legal compliance determination."
+legal_note: "This machine-checkable overlay supports traceability and evidence validation; it is not a certification or legal compliance determination. Applicability and evidence acceptance require qualified organizational review."
+regulatory_scope:
+  - document: "Приказ ФСТЭК России от 11.04.2025 №117"
+    clause: "50"
+    relation: "direct"
+    requirement: "For independently developed software intended for information systems, implement measures provided by sections 4 and 5 of GOST R 56939-2024."
+    source_note: "Section 4 defines the general requirements and section 5 defines the secure-software-development processes."
+
 processes:
   - id: "5.1"
     name: planning
+    gost_title: "Планирование процессов разработки безопасного программного обеспечения"
     artifact: planning-status-analysis.yml
+    validation: [scope, status, resources, implementation-plan, development-plan, responsibilities]
   - id: "5.2"
     name: training
+    gost_title: "Обучение сотрудников"
     artifact: training-log.yml
+    validation: [training-needs, training-plan, completion-records, awareness]
   - id: "5.3"
     name: security-requirements
+    gost_title: "Формирование и предъявление требований безопасности к программному обеспечению"
     artifact: requirements-registry.yml
+    validation: [requirements-regulation, requirements-register, review-criteria, change-traceability]
   - id: "5.4"
     name: configuration-management
+    gost_title: "Управление конфигурацией программного обеспечения"
     artifact: configuration-items.yml
+    validation: [configuration-items, unique-identification, change-control, version-traceability]
   - id: "5.5"
     name: deficiency-management
+    gost_title: "Управление недостатками и запросами на изменение программного обеспечения"
     artifact: defects-registry.yml
+    validation: [defect-id, affected-version, priority, status, change-request-traceability]
   - id: "5.6"
     name: architecture
-    artifact: null
+    gost_title: "Разработка, уточнение и анализ архитектуры программного обеспечения"
+    artifact: architecture.yml
+    validation: [architecture-baseline, security-decisions, review-events, change-traceability]
   - id: "5.7"
     name: threat-modeling
-    artifact: null
+    gost_title: "Моделирование угроз и разработка описания поверхности атаки"
+    artifact: threat-model.yml
+    validation: [threat-model, attack-surface, assets, interfaces, security-requirements-traceability]
   - id: "5.8"
-    name: secure-coding
-    artifact: null
+    name: coding-rules
+    gost_title: "Формирование и поддержание в актуальном состоянии правил кодирования"
+    artifact: coding-rules.yml
+    validation: [coding-standard, scope, enforcement, review-of-rules]
   - id: "5.9"
     name: code-review
+    gost_title: "Экспертиза исходного кода"
     artifact: code-review-log.yml
+    validation: [independent-review, reviewed-change, findings, remediation, approval]
   - id: "5.10"
     name: static-analysis
+    gost_title: "Статический анализ исходного кода"
     artifact: sast-tools.yml
+    validation: [tool-per-language, configuration, execution, warnings, review-criteria, reanalysis]
   - id: "5.11"
     name: dynamic-analysis
+    gost_title: "Динамический анализ кода программы"
     artifact: dynamic-analysis.yml
-    subrequirements:
-      - "5.11.3.1"
-      - "5.11.3.2"
-      - "5.11.3.3"
-      - "5.11.3.4"
-      - "5.11.3.5"
-      - "5.11.3.6"
+    validation: [roles, tool-selection, methods, modules, scenarios, failure-handling, periodicity, reports, fuzzing]
+    subrequirements: ["5.11.3.1", "5.11.3.2", "5.11.3.3", "5.11.3.4", "5.11.3.5", "5.11.3.6"]
   - id: "5.12"
-    name: build
+    name: secure-build
+    gost_title: "Использование безопасной системы сборки программного обеспечения"
     artifact: secure-build.yml
-    subrequirements:
-      - "5.12.1.1"
-      - "5.12.2.1"
-      - "5.12.2.2"
+    validation: [build-regulation, build-system, build-environment, tools, versions, configuration, secure-use]
   - id: "5.13"
-    name: secrets-management
-    artifact: secrets-inventory.yml
+    name: build-environment-security
+    gost_title: "Обеспечение безопасности сборочной среды программного обеспечения"
+    artifact: build-tools.yml
+    validation: [build-environment-regulation, isolation, access-control, least-privilege, reproducibility, audit-logs]
   - id: "5.14"
-    name: dependency-management
-    artifact: dependencies-inventory.yml
+    name: source-code-access-integrity
+    gost_title: "Управление доступом и контроль целостности кода при разработке программного обеспечения"
+    artifact: source-code-access.yml
+    validation: [access-regulation, access-model, privileged-access, integrity-control, auditability]
   - id: "5.15"
-    name: supplier-security
-    artifact: suppliers-registry.yml
+    name: secrets-security
+    gost_title: "Обеспечение безопасности используемых секретов"
+    artifact: secrets-inventory.yml
+    validation: [secret-types, storage, access, rotation, signing-keys, exposure-response]
   - id: "5.16"
-    name: software-supply-chain
-    artifact: null
+    name: composition-analysis
+    gost_title: "Использование инструментов композиционного анализа"
+    artifact: dependencies-inventory.yml
+    validation: [dependency-inventory, analysis-tool, versions, vulnerability-analysis, remediation, update-traceability]
   - id: "5.17"
-    name: security-testing
-    artifact: fuzzing-targets.yml
+    name: supply-chain-malware-check
+    gost_title: "Проверка кода на предмет внедрения вредоносного программного обеспечения через цепочки поставок"
+    artifact: suppliers-registry.yml
+    validation: [supplier-identification, supplied-code-identification, integrity, malware-analysis, scan-report]
   - id: "5.18"
-    name: release
-    artifact: null
+    name: functional-testing
+    gost_title: "Функциональное тестирование"
+    artifact: functional-testing.yml
+    validation: [test-plan, coverage, execution, defects, retest, results]
   - id: "5.19"
-    name: delivery
-    artifact: null
+    name: nonfunctional-testing
+    gost_title: "Нефункциональное тестирование"
+    artifact: nonfunctional-testing.yml
+    validation: [attack-surface-validation, threat-model-validation, architecture-validation, security-tests, findings]
   - id: "5.20"
-    name: security-validation
-    artifact: null
+    name: release-security
+    gost_title: "Обеспечение безопасности при выпуске готовой к эксплуатации версии программного обеспечения"
+    artifact: release-security.yml
+    validation: [acceptance, unresolved-findings, integrity, release-approval, release-evidence]
   - id: "5.21"
-    name: release-evidence
-    artifact: null
+    name: secure-delivery
+    gost_title: "Безопасная поставка программного обеспечения пользователям"
+    artifact: secure-delivery.yml
+    validation: [delivery-regulation, integrity, delivery-channel, documentation, delivery-record]
   - id: "5.22"
-    name: maintenance
-    artifact: null
+    name: support
+    gost_title: "Обеспечение поддержки программного обеспечения при эксплуатации пользователями"
+    artifact: support.yml
+    validation: [support-process, defect-intake, vulnerability-communication, update-support, user-notification]
   - id: "5.23"
     name: vulnerability-response
-    artifact: null
+    gost_title: "Реагирование на информацию об уязвимостях"
+    artifact: vulnerability-response.yml
+    validation: [vulnerability-analysis, applicability, criticality, decision, remediation, communication]
   - id: "5.24"
-    name: security-monitoring
-    artifact: null
+    name: vulnerability-search
+    gost_title: "Поиск уязвимостей в программном обеспечении при эксплуатации"
+    artifact: vulnerability-search.yml
+    validation: [public-source-monitoring, periodic-checks, code-checks, configuration-checks, reporting]
   - id: "5.25"
     name: decommissioning
+    gost_title: "Обеспечение безопасности при выводе программного обеспечения из эксплуатации"
     artifact: decommission-plan.yml
+    validation: [decommission-regulation, end-of-support, user-notification, roles, conditions]
+
 hard_fail:
   - missing_required_process_artifact
   - broken_cross_reference
