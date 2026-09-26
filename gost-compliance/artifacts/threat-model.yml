@@ -1,0 +1,19 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.7"
+status: "implementation-overlay"
+required_record_fields:
+  - methodology
+  - threats
+  - assets
+  - attack_surface
+  - interfaces
+  - mitigations
+  - security_requirements_traceability
+methodology: "record methodology"
+threats: []
+assets: []
+attack_surface: []
+interfaces: []
+mitigations: []
+security_requirements_traceability: []
