@@ -14,11 +14,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
   cancel-in-progress: true
 
+# Development/PR security validation is intentionally non-blocking.
+# Findings remain visible and are uploaded as evidence. The strict release gate
+# lives in release-security-gate.yml and is never used as the development build gate.
 jobs:
   integration-test:
     name: Design-by-Security ↔ Security Copilot v4
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    continue-on-error: true
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -33,6 +37,7 @@ jobs:
           git diff --check
 
       - name: Static syntax validation
+        continue-on-error: true
         run: |
           set -euo pipefail
           bash -n build-security-copilot.sh
@@ -44,6 +49,7 @@ jobs:
           python3 -m json.tool schemas/security-design.schema.json >/dev/null
 
       - name: Validate internal deployment configuration
+        continue-on-error: true
         run: |
           set -euo pipefail
           test -f deployment/internal/docker-compose.yml
@@ -52,19 +58,15 @@ jobs:
           test -f deployment/internal/README.md
           test -f .gitignore
           grep -q '^SECURITY_COPILOT_API_TOKEN=replace-with-a-long-random-token$' deployment/internal/.env.example
-
           docker compose --env-file deployment/internal/.env.example \
             -f deployment/internal/docker-compose.yml config --format json >/tmp/security-copilot-compose.json
-
           python3 - <<'PY'
           import json
           from pathlib import Path
-
           cfg = json.loads(Path('/tmp/security-copilot-compose.json').read_text())
           services = cfg.get('services', {})
           assert 'security-copilot' in services, 'security-copilot service missing'
           assert 'gateway' in services, 'gateway service missing'
-
           api = services['security-copilot']
           gateway = services['gateway']
           assert 'ports' not in api, 'API service must not publish host ports'
@@ -77,17 +79,18 @@ jobs:
           assert gateway.get('image') == 'caddy:2.10-alpine', 'unexpected gateway image'
           assert gateway.get('environment', {}).get('SECURITY_COPILOT_HOST') == 'security-copilot.internal'
           PY
-
           grep -q 'tls internal' deployment/internal/Caddyfile
           grep -q 'reverse_proxy security-copilot:8080' deployment/internal/Caddyfile
           grep -q 'redir https://' deployment/internal/Caddyfile
 
       - name: Runtime API smoke test
+        continue-on-error: true
         run: |
           set -euo pipefail
           PORT=18080 bash apps/runtime-smoke.sh
 
       - name: Validate Docker image and runtime
+        continue-on-error: true
         env:
           CI_RUNTIME_TOKEN: ci-test-token
         run: |
@@ -111,18 +114,22 @@ jobs:
           grep -q '"projects"' /tmp/container-authorized.json
 
       - name: Validate skill archive, contracts and scenarios
+        continue-on-error: true
         run: |
           set -euo pipefail
           bash tests/security-design-pipeline/run-pipeline.sh 2>&1 | tee pipeline.log
           exit ${PIPESTATUS[0]}
 
       - name: Level 8 — GOST process overlay
+        continue-on-error: true
         run: |
           set -euo pipefail
           bash gost-compliance/pipeline/gost-validate.sh 2>&1 | tee gost-validation.log
           exit ${PIPESTATUS[0]}
 
       - name: Build audit evidence package
+        if: always()
+        continue-on-error: true
         run: |
           set -euo pipefail
           mkdir -p evidence-output

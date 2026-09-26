@@ -1,0 +1,99 @@
+name: Release Security Gate
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: release-security-gate-${{ github.ref }}
+  cancel-in-progress: false
+
+# This is the only strict security gate. Development/PR workflows remain
+# non-blocking so developers can build, test and debug continuously.
+jobs:
+  release-security-gate:
+    name: Deterministic Release Security Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout release
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Repository hygiene
+        run: |
+          set -euo pipefail
+          if git grep -Il $'\r' -- '*.sh' '*.py' '*.yml' '*.yaml' '*.json' '*.md' '*.txt'; then
+            echo 'ERROR: CRLF line endings detected' >&2
+            exit 1
+          fi
+          git diff --check
+
+      - name: Static syntax validation
+        run: |
+          set -euo pipefail
+          bash -n build-security-copilot.sh
+          bash -n apps/runtime-smoke.sh
+          bash -n tests/security-design-pipeline/run-pipeline.sh
+          bash -n gost-compliance/pipeline/gost-validate.sh
+          bash -n gost-compliance/pipeline/evidence-package.sh
+          python3 -m py_compile apps/server/server.py apps/cli/security_copilot.py tests/security-design-pipeline/semantic/*.py tests/security-design-pipeline/graph/*.py
+          python3 -m json.tool schemas/security-design.schema.json >/dev/null
+
+      - name: Build and smoke-test runtime
+        env:
+          CI_RUNTIME_TOKEN: ci-release-test-token
+        run: |
+          set -euo pipefail
+          docker build --file deployment/docker/Dockerfile --tag security-copilot:release-${GITHUB_SHA} .
+          docker run --rm -d --name security-copilot-release \
+            -p 18081:8080 \
+            -e SECURITY_COPILOT_REQUIRE_AUTH=true \
+            -e SECURITY_COPILOT_API_TOKEN="$CI_RUNTIME_TOKEN" \
+            security-copilot:release-${GITHUB_SHA}
+          cleanup() { docker logs security-copilot-release || true; docker rm -f security-copilot-release >/dev/null 2>&1 || true; }
+          trap cleanup EXIT
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:18081/health >/dev/null 2>&1; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:18081/health >/dev/null
+          test "$(curl -sS -o /tmp/unauthorized.json -w '%{http_code}' http://127.0.0.1:18081/api/v1/projects)" = "401"
+          curl -fsS -H "Authorization: Bearer $CI_RUNTIME_TOKEN" http://127.0.0.1:18081/api/v1/projects >/tmp/authorized.json
+          grep -q '"projects"' /tmp/authorized.json
+
+      - name: Security Design validation
+        run: |
+          set -euo pipefail
+          bash tests/security-design-pipeline/run-pipeline.sh 2>&1 | tee pipeline.log
+          exit ${PIPESTATUS[0]}
+
+      - name: GOST RBPO Level 8 validation
+        run: |
+          set -euo pipefail
+          bash gost-compliance/pipeline/gost-validate.sh 2>&1 | tee gost-validation.log
+          exit ${PIPESTATUS[0]}
+
+      - name: Build audit evidence package
+        run: |
+          set -euo pipefail
+          mkdir -p evidence-output
+          bash gost-compliance/pipeline/evidence-package.sh "$PWD/evidence-output/package"
+
+      - name: Upload release evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-security-evidence
+          path: |
+            pipeline.log
+            gost-validation.log
+            evidence-output/*.zip
+            evidence-output/*.sha256
+          if-no-files-found: error
+          retention-days: 90
