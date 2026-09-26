@@ -1,6 +1,7 @@
-# 5.20 Security Validation
+# 5.20 Обеспечение безопасности при выпуске готовой к эксплуатации версии ПО
 
-Validate that implemented controls satisfy their requirements using reproducible tests and evidence.
+Цель: организовать приемку ПО и не допустить недостатков перед предоставлением пользователям.
 
-Evidence: validation records, expected results and linked requirements.
-Gate: control without validation → hard fail.
+Минимальный контроль: критерии приемки, результаты проверок, анализ нерешённых findings, меры проверки целостности, решение о выпуске и release evidence.
+
+Evidence: `gost-compliance/artifacts/release-security.yml`.
