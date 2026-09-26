@@ -1,6 +1,7 @@
-# 5.21 Release Evidence
+# 5.21 Безопасная поставка программного обеспечения пользователям
 
-Retain the evidence needed to reproduce the security decision for a release.
+Цель: защищать ПО и документацию от угроз в процессе передачи пользователю.
 
-Evidence: commit identity, requirements, test results, security gate, provenance and approvals.
-Gate: release decision without traceable evidence → validation required.
+Минимальный контроль: регламент поставки, идентификация выпуска, контроль целостности, защищённый канал, эксплуатационная документация и запись факта поставки.
+
+Evidence: `gost-compliance/artifacts/secure-delivery.yml`.
