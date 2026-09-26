@@ -1,3 +1,17 @@
-version: "1.0"
+version: "2.0"
+standard: "GOST R 56939-2024"
+process: "5.17"
+status: "implementation-overlay"
+required_record_fields:
+  - supplier_identification
+  - supplied_code_identification
+  - integrity
+  - malware_analysis
+  - scan_report
 suppliers: []
+supplier_identification: []
+supplied_code_identification: []
+integrity: []
+malware_analysis: []
+scan_report: []
 # supplier, service, criticality, security_requirements, assessment, review_date
