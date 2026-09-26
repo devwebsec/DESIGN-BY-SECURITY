@@ -1,6 +1,7 @@
-# 5.25 Decommissioning
+# 5.25 Обеспечение безопасности при выводе программного обеспечения из эксплуатации
 
-Retire software, identities, data and infrastructure securely, including dependency and access revocation and evidence retention.
+Цель: не допустить угроз, связанных с эксплуатацией неподдерживаемой версии ПО.
 
-Evidence: decommission plan, approvals, deletion/retention evidence and validation.
-Gate: residual privileged access or unmanaged sensitive data after retirement → hard fail.
+Минимальный контроль: регламент вывода из эксплуатации, условия прекращения поддержки, роли и своевременное информирование пользователей.
+
+Evidence: `gost-compliance/artifacts/decommission-plan.yml`.
