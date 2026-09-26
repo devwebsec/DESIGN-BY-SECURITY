@@ -1,6 +1,7 @@
-# 5.22 Maintenance
+# 5.22 Обеспечение поддержки программного обеспечения при эксплуатации пользователями
 
-Maintain security controls, dependencies, configurations and operational documentation after release.
+Цель: обеспечивать техническую поддержку для устранения выявляемых недостатков при использовании и обновлении ПО.
 
-Evidence: maintenance records and validation after security-relevant changes.
-Gate: security-critical change without reassessment → validation required.
+Минимальный контроль: support process, intake defects/vulnerabilities, update support and user communications.
+
+Evidence: `gost-compliance/artifacts/support.yml`.
