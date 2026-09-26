@@ -1,3 +1,15 @@
-version: "1.0"
+version: "2.0"
+standard: "GOST R 56939-2024"
+process: "5.10"
+status: "implementation-overlay"
+required_record_fields:
+  - language
+  - tool
+  - version
+  - configuration
+  - execution
+  - warnings
+  - review_criteria
+  - reanalysis
 tools: []
 # tool, version, scope, policy, findings_threshold, evidence
