@@ -1,6 +1,7 @@
-# 5.15 Supplier Security
+# 5.15 Обеспечение безопасности используемых секретов
 
-Identify security-relevant suppliers and define security requirements, evidence and review points.
+Цель: обеспечить безопасное использование секретов, применяемых для аутентификации, целостности и конфиденциальности.
 
-Evidence: supplier registry, security clauses and assessments.
-Gate: critical supplier dependency without security assessment → validation required.
+Минимальный контроль: инвентаризация типов секретов, защищенное хранение, ограничение доступа, жизненный цикл/ротация и реагирование на раскрытие.
+
+Evidence: `gost-compliance/artifacts/secrets-inventory.yml`.

@@ -1,3 +1,13 @@
-version: "1.0"
+version: "2.0"
+standard: "GOST R 56939-2024"
+process: "5.2"
+status: "implementation-overlay"
+required_record_fields:
+  - training_needs
+  - training_plan
+  - records
+  - awareness
+training_needs: []
+training_plan: []
 records: []
-# role, topic, person_or_team, completed_at, evidence
+awareness: []

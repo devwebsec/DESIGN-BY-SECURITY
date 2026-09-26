@@ -1,0 +1,15 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.22"
+status: "implementation-overlay"
+required_record_fields:
+  - support_process
+  - defect_intake
+  - vulnerability_communication
+  - update_support
+  - user_notification
+support_process: "record support process and responsibilities"
+defect_intake: []
+vulnerability_communication: []
+update_support: []
+user_notification: []

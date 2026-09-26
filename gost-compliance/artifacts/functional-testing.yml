@@ -1,0 +1,19 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.18"
+status: "implementation-overlay"
+required_record_fields:
+  - test_plan
+  - scope
+  - cases
+  - execution
+  - defects
+  - retest
+  - results
+test_plan: "record approved functional test plan"
+scope: []
+cases: []
+execution: []
+defects: []
+retest: []
+results: []

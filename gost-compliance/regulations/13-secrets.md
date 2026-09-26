@@ -1,6 +1,9 @@
-# 5.13 Secrets Management
+# 5.13 Обеспечение безопасности сборочной среды программного обеспечения
 
-Secrets must not be embedded in source or artifacts. Manage access, lifetime, rotation and auditability.
+Цель: обеспечить безопасность сборки и исключить внесение уязвимостей и ошибок со стороны сборочной среды.
 
-Evidence: secrets inventory, scanning configuration and remediation records.
-Gate: exposed production secret → hard fail until contained and rotated.
+Минимальный контроль: регламент сборочной среды, изоляция, управление доступом, минимизация привилегий, разделение полномочий, фиксация среды/инструментов и аудит сборок.
+
+Evidence: `gost-compliance/artifacts/build-tools.yml`.
+
+Gate: отсутствие идентифицируемой и контролируемой сборочной среды — hard fail.

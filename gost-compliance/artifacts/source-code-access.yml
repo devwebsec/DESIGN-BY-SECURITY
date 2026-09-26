@@ -1,0 +1,15 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.14"
+status: "implementation-overlay"
+required_record_fields:
+  - access_regulation
+  - access_model
+  - privileged_access
+  - integrity_control
+  - audit_events
+access_regulation: "record approved access and integrity regulation"
+access_model: "record RBAC/model and tools"
+privileged_access: "record privileged identities and controls"
+integrity_control: "record repository integrity controls"
+audit_events: "record access and integrity audit evidence"

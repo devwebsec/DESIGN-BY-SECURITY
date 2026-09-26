@@ -1,0 +1,17 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.20"
+status: "implementation-overlay"
+required_record_fields:
+  - acceptance_criteria
+  - validation_results
+  - unresolved_findings
+  - integrity_controls
+  - release_approval
+  - release_evidence
+acceptance_criteria: []
+validation_results: []
+unresolved_findings: []
+integrity_controls: []
+release_approval: "record authorized release decision"
+release_evidence: []

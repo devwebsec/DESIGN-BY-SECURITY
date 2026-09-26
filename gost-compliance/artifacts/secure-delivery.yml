@@ -1,0 +1,17 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.21"
+status: "implementation-overlay"
+required_record_fields:
+  - delivery_regulation
+  - release_identity
+  - integrity
+  - delivery_channel
+  - documentation
+  - delivery_record
+delivery_regulation: "record approved secure delivery regulation"
+release_identity: "record version/build/artifact identity"
+integrity: "record signature/checksum verification"
+delivery_channel: "record protected delivery channel"
+documentation: []
+delivery_record: []

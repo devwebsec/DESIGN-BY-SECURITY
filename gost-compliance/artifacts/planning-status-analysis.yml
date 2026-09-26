@@ -1,4 +1,17 @@
-version: "1.0"
-status: "internal"
-items: []
-# lifecycle_stage, owner, status, evidence, blockers, review_date
+version: "2.0"
+standard: "GOST R 56939-2024"
+process: "5.1"
+status: "implementation-overlay"
+required_record_fields:
+  - process_status
+  - resource_analysis
+  - development_plan
+  - implementation_plan
+  - scope
+  - responsibilities
+process_status: []
+resource_analysis: []
+development_plan: []
+implementation_plan: []
+scope: []
+responsibilities: []

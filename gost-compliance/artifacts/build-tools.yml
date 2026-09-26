@@ -1,27 +1,39 @@
-version: "1.1"
+version: "2.0"
 standard: "GOST R 56939-2024"
-process: "5.12"
+process: "5.13"
 status: "implementation-overlay"
-tools: []
-# tool, version, build_command, runner, provenance, reproducibility
+regulation: "gost-compliance/regulations/13-secrets.md"
+# The regulation filename is retained for repository compatibility; the process identity is authoritative.
 required_record_fields:
-  - tool
-  - version
-  - build_command
-  - runner
+  - build_environment
+  - isolation
+  - access_control
+  - least_privilege
+  - separation_of_duties
   - runner_image
-  - source_revision
-  - dependency_lock
-  - provenance
+  - tool_versions
+  - configuration
+  - audit_logs
   - reproducibility
-  - artifact_digest
-  - sbom
-  - signature
-environment:
+build_environment:
   os: "record exact version"
   architecture: "record exact architecture"
+  runner_image: "record immutable image reference or digest"
   toolchain: "record exact versions"
-  container_images: "record immutable digest when used"
-transformations:
-  unsafe_transformations_forbidden: true
-  validation_required: true
+isolation:
+  build_isolation_required: true
+  untrusted_inputs_isolated: true
+access_control:
+  least_privilege_required: true
+  privileged_access_recorded: true
+  service_accounts_recorded: true
+separation_of_duties:
+  release_authorization_separate_from_build_execution: true
+audit:
+  build_events_recorded: true
+  source_revision_recorded: true
+  artifact_digest_recorded: true
+reproducibility:
+  inputs_recorded: true
+  commands_recorded: true
+  environment_recorded: true

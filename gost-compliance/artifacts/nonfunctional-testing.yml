@@ -1,0 +1,19 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.19"
+status: "implementation-overlay"
+required_record_fields:
+  - test_plan
+  - attack_surface_validation
+  - threat_model_validation
+  - architecture_validation
+  - security_tests
+  - findings
+  - remediation
+test_plan: "record approved nonfunctional/security test plan"
+attack_surface_validation: []
+threat_model_validation: []
+architecture_validation: []
+security_tests: []
+findings: []
+remediation: []

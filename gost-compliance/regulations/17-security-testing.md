@@ -1,6 +1,7 @@
-# 5.17 Security Testing
+# 5.17 Проверка кода на предмет внедрения вредоносного ПО через цепочки поставок
 
-Test security requirements and critical abuse cases using appropriate static, dynamic, negative and property-based methods.
+Цель: снизить риск внедрения вредоносного ПО через воздействие на ПО или механизмы его доставки.
 
-Evidence: test plan, cases, results and defects.
-Gate: requirement without validation → hard fail.
+Минимальный контроль: идентификация поставщика и полученного кода, контроль целостности/происхождения и анализ кода на вредоносное ПО с сохранением отчётов.
+
+Evidence: `gost-compliance/artifacts/suppliers-registry.yml`.

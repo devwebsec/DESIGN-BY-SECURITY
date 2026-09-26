@@ -1,6 +1,7 @@
-# 5.24 Security Monitoring
+# 5.24 Поиск уязвимостей в программном обеспечении при эксплуатации
 
-Operate telemetry, detection, investigation and feedback mechanisms for security-relevant events.
+Цель: систематически и углублённо искать ошибки и уязвимости в эксплуатируемом ПО для упреждающего реагирования.
 
-Evidence: telemetry sources, detections, incident findings and redesign feedback.
-Gate: critical attack path without detection or explicit gap → hard fail.
+Минимальный контроль: регламент поиска, регулярный мониторинг открытых источников, регулярные проверки кода/конфигураций и отчётность по результатам.
+
+Evidence: `gost-compliance/artifacts/vulnerability-search.yml`.

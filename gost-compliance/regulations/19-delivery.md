@@ -1,6 +1,7 @@
-# 5.19 Delivery
+# 5.19 Нефункциональное тестирование
 
-Ensure delivered software can be traced to an approved build and release decision.
+Цель: подтверждать полноту сведений о поверхности атаки, модели угроз и архитектуре и выявлять недостатки средствами нефункционального тестирования.
 
-Evidence: artifact identity, provenance, integrity and deployment record.
-Gate: unverifiable production delivery → validation required.
+Минимальный контроль: план и результаты security/non-functional tests, сравнение с архитектурой, моделью угроз и поверхностью атаки, регистрация и устранение findings.
+
+Evidence: `gost-compliance/artifacts/nonfunctional-testing.yml`.

@@ -1,0 +1,15 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.8"
+status: "implementation-overlay"
+required_record_fields:
+  - standard
+  - scope
+  - enforcement
+  - review_process
+  - language_guidance
+standard: "record approved coding standard"
+scope: "record repositories, languages and components covered"
+enforcement: "record automated and manual checks"
+review_process: "record review and update criteria"
+language_guidance: []

@@ -1,6 +1,7 @@
-# 5.16 Software Supply Chain
+# 5.16 Использование инструментов композиционного анализа
 
-Track source, dependencies, build inputs, provenance, artifact integrity and delivery chain.
+Цель: снизить риски наследования уязвимостей и недекларированных возможностей из заимствованного кода.
 
-Evidence: SBOM, provenance and signing/verification records.
-Gate: critical artifact provenance gap → hard fail.
+Минимальный контроль: инвентаризация зависимостей, выбор и конфигурация инструмента композиционного анализа, анализ уязвимостей, решения по обновлению/исправлению и прослеживаемость.
+
+Evidence: `gost-compliance/artifacts/dependencies-inventory.yml`.

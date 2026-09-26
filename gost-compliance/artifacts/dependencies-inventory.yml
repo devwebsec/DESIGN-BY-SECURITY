@@ -1,3 +1,19 @@
-version: "1.0"
+version: "2.0"
+standard: "GOST R 56939-2024"
+process: "5.16"
+status: "implementation-overlay"
+required_record_fields:
+  - dependency_inventory
+  - analysis_tool
+  - versions
+  - vulnerability_analysis
+  - remediation
+  - update_traceability
 dependencies: []
+dependency_inventory: []
+analysis_tool: "record tool/version"
+versions: []
+vulnerability_analysis: []
+remediation: []
+update_traceability: []
 # component, package, version, source, provenance, known_risk, disposition

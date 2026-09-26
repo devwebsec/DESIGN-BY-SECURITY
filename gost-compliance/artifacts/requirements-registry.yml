@@ -1,3 +1,14 @@
-version: "1.0"
+version: "2.0"
+standard: "GOST R 56939-2024"
+process: "5.3"
+status: "implementation-overlay"
+required_record_fields:
+  - requirements_regulation
+  - requirements
+  - consistency_review
+  - periodic_review
+requirements_regulation: "record approved security-requirements management regulation"
 requirements: []
+consistency_review: []
+periodic_review: []
 # Each requirement should link threat -> control -> validation.

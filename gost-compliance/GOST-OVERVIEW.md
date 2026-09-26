@@ -1,61 +1,81 @@
-# GOST R 56939-2024 — Security Development Process Overlay
+# GOST R 56939-2024 — RBPO compliance/evidence overlay
 
-This directory implements a **machine-checkable process overlay** for the software-development lifecycle referenced by the Design-by-Security presentation.
+This directory implements a **machine-checkable implementation and evidence overlay** for ГОСТ Р 56939-2024.
 
-It is not a legal certification and does not by itself establish regulatory compliance. Actual applicability, interpretation and evidence acceptance require qualified organizational/legal review.
+It is not a certification and does not by itself establish legal or regulatory compliance. Applicability, interpretation and evidence acceptance remain an organizational/legal responsibility.
 
-## 25-process model
+## Regulatory boundary
 
-The overlay is grouped into three lifecycle areas:
+For independently developed software intended for use in information systems, пункт 50 Приказа ФСТЭК России от 11.04.2025 №117 requires implementation of the measures provided by sections 4 and 5 of ГОСТ Р 56939-2024.
 
-- **Planning (5.1–5.5):** planning, training, requirements, configuration, deficiencies.
-- **Implementation (5.6–5.21):** architecture, threat modeling, coding, review, analysis/testing, build, secrets, dependencies, supply chain, release and delivery.
-- **Operation (5.22–5.25):** maintenance, vulnerability response, security monitoring/hunting and decommissioning.
-
-Each process has:
-
-1. a human-readable regulation/checklist;
-2. a machine-readable artifact template where applicable;
-3. validation references in `GOST-MAPPING.yml`;
-4. explicit hard-fail semantics where a missing artifact creates a material design-control gap.
-
-## 5.11 Dynamic analysis boundary
-
-The 5.11 overlay explicitly records the elements required by the supplied 5.11.3 excerpt:
-
-- roles and responsibilities;
-- tool-selection criteria, including fuzzing tools;
-- dynamic-analysis methods;
-- module/component selection criteria;
-- failure handling and remediation;
-- repeat-analysis criteria and periodicity;
-- fuzzing completion criteria;
-- tool name/version/compatibility/runtime parameters;
-- selected modules and stable identifiers;
-- per-module test scenarios with start/stop criteria;
-- dynamic-analysis findings and processing-error results;
-- fuzzing duration, abnormal terminations, unique paths and crash analysis.
-
-The machine-readable contract lives in `examples/web-api/security-design.yaml`, `gost-compliance/artifacts/dynamic-analysis.yml` and `gost-compliance/artifacts/fuzzing-targets.yml`.
-
-## 5.12 Secure build boundary
-
-The 5.12 overlay records the build regulation and fixes the build-system/environment evidence boundary:
-
-- source revision and dependency inputs;
-- build system, runner and configuration;
-- toolchain/environment versions;
-- transformation controls;
-- reproducibility inputs and commands;
-- artifact digests;
-- SBOM, provenance and release-signing state.
-
-The machine-readable contract lives in `gost-compliance/artifacts/secure-build.yml` and `gost-compliance/artifacts/build-tools.yml`.
-
-## Validation principle
+The repository therefore models:
 
 ```text
-PROCESS → REQUIRED ARTIFACT → CROSS-REFERENCE → EVIDENCE → VALIDATION
+Приказ ФСТЭК №117 п.50
+        ↓
+ГОСТ Р 56939-2024 §§4–5
+        ↓
+25 processes in §5
+        ↓
+control → implementation → evidence → deterministic validation
 ```
 
-A failed Level 8 validation returns the finding to Design-by-Security as `REDESIGN_REQUIRED`; it does not create a claim of compliance.
+## Exact §5 process catalogue
+
+| ID | Process |
+|---|---|
+| 5.1 | Planning of secure-software-development processes |
+| 5.2 | Employee training |
+| 5.3 | Formation and presentation of software security requirements |
+| 5.4 | Software configuration management |
+| 5.5 | Deficiency and change-request management |
+| 5.6 | Software architecture development, refinement and analysis |
+| 5.7 | Threat modeling and attack-surface description |
+| 5.8 | Coding rules |
+| 5.9 | Source-code expertise/review |
+| 5.10 | Static source-code analysis |
+| 5.11 | Dynamic code analysis |
+| 5.12 | Secure software build system |
+| 5.13 | Secure build environment |
+| 5.14 | Source-code access and integrity |
+| 5.15 | Secret security |
+| 5.16 | Composition analysis |
+| 5.17 | Supply-chain malware checking |
+| 5.18 | Functional testing |
+| 5.19 | Non-functional testing |
+| 5.20 | Security of release of production-ready software |
+| 5.21 | Secure software delivery |
+| 5.22 | Software support during operation |
+| 5.23 | Vulnerability-information response |
+| 5.24 | Vulnerability search during operation |
+| 5.25 | Secure decommissioning |
+
+The repository mapping is authoritative for process identity and evidence routing. The individual regulation documents are explanatory implementation overlays, not substitutes for the standard text.
+
+## Evidence model
+
+Every process has a machine-readable evidence contract. A control is not considered verified merely because an artifact file exists. The validation path is:
+
+```text
+NORMATIVE BASIS
+ → CONTROL
+ → IMPLEMENTATION
+ → EXECUTION/REVIEW
+ → EVIDENCE
+ → INTEGRITY/TRACEABILITY
+ → DETERMINISTIC VALIDATION
+```
+
+Where a requirement cannot be proven automatically, the evidence state remains unresolved or requires an authorized human decision; the LLM is not the normative PASS/FAIL authority.
+
+## 5.11 and 5.12 boundaries
+
+5.11 records the dynamic-analysis and fuzzing evidence required by the supplied standard text, including tool/method selection, targets, scenarios, failure handling, repeat analysis and reports.
+
+5.12 records the secure build-system boundary. 5.13 separately covers the security of the build environment. These are intentionally distinct controls.
+
+## Hard-fail principles
+
+The validator hard-fails on missing required process evidence, broken cross-references, fabricated/unknown evidence presented as proof, unresolved critical design flaws, missing required retests, unanalysed fuzzing crashes and missing secure-build provenance/digests.
+
+Validation baseline: repository main commit `9b8574022e88bac427dff6328f5c30fa1d4cee2b`; this branch adds deterministic process/artifact identity checks before merge.
