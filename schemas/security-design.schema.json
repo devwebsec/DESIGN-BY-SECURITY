@@ -15,49 +15,33 @@
     "security_requirements": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
     "controls": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
     "validation": {"type": "array", "items": {"$ref": "#/$defs/id_object"}},
-    "security_gate": {"type": "object", "required": ["decision", "residual_risk"]},
+    "security_gate": {
+      "type": "object",
+      "required": ["decision", "evidence_boundary"],
+      "additionalProperties": false,
+      "properties": {
+        "decision": {"type": "string", "enum": ["PASS", "FAIL", "CONDITIONAL"]},
+        "review_outcome": {"type": "string", "enum": ["APPROVE", "APPROVE_WITH_CONDITIONS", "REDESIGN_REQUIRED", "DO_NOT_APPROVE"]},
+        "residual_risk": {"type": ["object", "null"]},
+        "evidence_boundary": {"type": "object"},
+        "blocking_conditions": {"type": "array", "items": {"type": "string"}},
+        "unresolved_critical_design_flaws": {"type": "array", "items": {"type": "string"}},
+        "unknowns": {"type": "array", "items": {"type": "string"}}
+      }
+    },
     "operational_handoff": {"type": "object"},
     "lessons_learned": {"type": "array"},
     "redesign": {"type": "array"},
-    "dynamic_analysis": {
-      "type": "object",
-      "required": ["regulation", "roles", "tool_selection", "methods", "module_selection", "failure_handling", "remediation", "periodicity", "tools", "modules", "scenarios", "reports"]
-    },
-    "fuzzing": {
-      "type": "object",
-      "required": ["campaigns", "periodicity", "completion_criteria", "reports"]
-    },
-    "secure_build": {
-      "type": "object",
-      "required": ["regulation", "build_system", "source_integrity", "transformations", "environment", "reproducibility", "artifacts", "gate"]
-    },
-    "evidence": {
-      "type": "object",
-      "required": ["manifest", "items"]
-    }
+    "dynamic_analysis": {"type": "object", "required": ["regulation", "roles", "tool_selection", "methods", "module_selection", "failure_handling", "remediation", "periodicity", "tools", "modules", "scenarios", "reports"]},
+    "fuzzing": {"type": "object", "required": ["campaigns", "periodicity", "completion_criteria", "reports"]},
+    "secure_build": {"type": "object", "required": ["regulation", "build_system", "source_integrity", "transformations", "environment", "reproducibility", "artifacts", "gate"]},
+    "evidence": {"type": "object", "required": ["manifest", "items"]}
   },
   "$defs": {
-    "id_object": {
-      "type": "object",
-      "required": ["id"],
-      "properties": {"id": {"type": "string"}},
-      "additionalProperties": true
-    },
-    "tool": {
-      "type": "object",
-      "required": ["id", "name", "version", "type", "compatibility", "runtime"]
-    },
-    "module": {
-      "type": "object",
-      "required": ["id", "name", "identifier"]
-    },
-    "scenario": {
-      "type": "object",
-      "required": ["id", "module_id", "tool_id", "parameters", "start_criteria", "stop_criteria"]
-    },
-    "evidence_item": {
-      "type": "object",
-      "required": ["id", "type", "source", "sha256", "created_at"]
-    }
+    "id_object": {"type": "object", "required": ["id"], "properties": {"id": {"type": "string"}}, "additionalProperties": true},
+    "tool": {"type": "object", "required": ["id", "name", "version", "type", "compatibility", "runtime"]},
+    "module": {"type": "object", "required": ["id", "name", "identifier"]},
+    "scenario": {"type": "object", "required": ["id", "module_id", "tool_id", "parameters", "start_criteria", "stop_criteria"]},
+    "evidence_item": {"type": "object", "required": ["id", "type", "source", "sha256", "created_at"]}
   }
 }

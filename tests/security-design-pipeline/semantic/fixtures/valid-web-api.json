@@ -50,7 +50,15 @@
       {"id": "E-003", "type": "secure-build-record", "source": "V-001", "path": "evidence/build/", "sha256": "RECORDED-BY-PIPELINE", "created_at": "CI_TIMESTAMP"}
     ]
   },
-  "security_gate": {"decision": "PASS", "unresolved_critical_design_flaws": [], "unknowns": []},
+  "security_gate": {
+    "decision": "PASS",
+    "review_outcome": "APPROVE",
+    "residual_risk": null,
+    "evidence_boundary": {"basis": ["V-001", "E-001", "E-002", "E-003"], "unknowns_excluded": true},
+    "blocking_conditions": [],
+    "unresolved_critical_design_flaws": [],
+    "unknowns": []
+  },
   "operational_handoff": {"attack_path_ids": ["AP-001"], "detection_ids": ["D-001"], "response_owner": "SOC", "human_approval_required_for_destructive_actions": true},
   "lessons_learned": [{"id": "L-001", "root_cause": "Input trust boundary lacked explicit validation", "security_debt": "SD-001"}],
   "redesign": [{"id": "RD-001", "source_lesson_id": "L-001", "changes": ["strengthen API validation", "add regression test"]}]

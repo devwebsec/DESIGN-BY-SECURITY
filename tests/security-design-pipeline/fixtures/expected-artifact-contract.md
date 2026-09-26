@@ -17,10 +17,27 @@ The integrated pipeline is considered structurally valid only when these artifac
 | Fuzzing | fuzzing campaign/report | tool/version, module, corpus, duration, crashes, unique paths, crash analysis, completion criteria |
 | Secure Build | secure build record | build system, environment, source/dependencies, transformations, reproducibility, digest, SBOM, provenance |
 | Evidence | evidence manifest | source reference, path, SHA-256, timestamp, report/artifact linkage |
-| Gate | decision | PASS / FAIL / REDESIGN REQUIRED + rationale |
+| Gate | decision + review_outcome | PASS/FAIL/CONDITIONAL + APPROVE/APPROVE_WITH_CONDITIONS/REDESIGN_REQUIRED/DO_NOT_APPROVE + evidence_boundary |
 | Operate | SOC/IR handoff | telemetry, identity, asset, threat, attack-path context |
 | Learn | lessons learned | finding, root cause, control effectiveness |
 | Redesign | change set | debt, requirement/control change, validation |
+
+## Gate semantics
+
+The machine validator emits `decision`:
+
+- `PASS` — artifact satisfies the validator contract;
+- `FAIL` — one or more hard-fail conditions remain;
+- `CONDITIONAL` — non-critical conditions remain unresolved.
+
+The security architect records `review_outcome` independently:
+
+- `APPROVE`;
+- `APPROVE_WITH_CONDITIONS` — requires `residual_risk`;
+- `REDESIGN_REQUIRED`;
+- `DO_NOT_APPROVE`.
+
+`decision: FAIL` cannot be paired with `APPROVE` or `APPROVE_WITH_CONDITIONS`. `evidence_boundary` is mandatory for every gate.
 
 ## Hard-fail conditions
 

@@ -26,7 +26,15 @@ Response/recovery: account/session containment, credential rotation, evidence pr
 
 ## Gate
 
-FAIL if critical authorization or authentication design flaws remain unresolved. PASS only when the control and validation chain is complete or an explicitly accepted residual risk is documented.
+`decision` MUST be `PASS` or `CONDITIONAL` for a releasable design artifact.
+
+`review_outcome` MUST be one of:
+- `APPROVE` — if the control and validation chain is complete.
+- `APPROVE_WITH_CONDITIONS` — if residual risk is explicitly accepted and documented; `residual_risk` is required.
+
+`FAIL` is the only valid `decision` when critical authorization or authentication design flaws remain unresolved, and it routes to `review_outcome=REDESIGN_REQUIRED`.
+
+`evidence_boundary` MUST be present for every gate.
 
 ## Security Copilot handoff
 

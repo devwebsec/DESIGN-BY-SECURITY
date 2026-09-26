@@ -104,8 +104,23 @@ def main() -> int:
         if lesson_id:
             add(lesson_id, x["id"])
 
-    gate = str(d.get("security_gate", {}).get("decision", "")).upper()
-    graph = {"security_gate": gate, "nodes": nodes, "edges": edges}
+    gate_obj = d.get("security_gate", {})
+    if not isinstance(gate_obj, dict):
+        print("security_gate must be an object", file=sys.stderr)
+        return 4
+    graph = {
+        "security_gate": {
+            "decision": str(gate_obj.get("decision", "")).upper(),
+            "review_outcome": str(gate_obj.get("review_outcome", "")).upper() or None,
+            "residual_risk": gate_obj.get("residual_risk"),
+            "evidence_boundary": gate_obj.get("evidence_boundary"),
+            "blocking_conditions": gate_obj.get("blocking_conditions", []),
+            "unresolved_critical_design_flaws": gate_obj.get("unresolved_critical_design_flaws", []),
+            "unknowns": gate_obj.get("unknowns", []),
+        },
+        "nodes": nodes,
+        "edges": edges,
+    }
     Path(sys.argv[2]).write_text(json.dumps(graph, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"Generated canonical graph: {sys.argv[2]}")
     return 0

@@ -87,7 +87,7 @@ REDESIGN_RECOMMENDATION
 1. Architecture question → Design-by-Security.
 2. Active/observed security event → Security Copilot.
 3. Architecture weakness discovered during operations → return a structured finding to Design-by-Security.
-4. Critical unresolved design flaw → `REDESIGN REQUIRED`.
+4. Critical unresolved design flaw → `decision=FAIL`, `review_outcome=REDESIGN_REQUIRED`.
 5. Production-impacting or destructive response → human approval required.
 
 ## End-to-end loop

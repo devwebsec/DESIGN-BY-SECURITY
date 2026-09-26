@@ -1,5 +1,13 @@
 {
-  "security_gate":"PASS",
+  "security_gate": {
+    "decision": "PASS",
+    "review_outcome": "APPROVE",
+    "residual_risk": null,
+    "evidence_boundary": {"basis": ["V-001"], "unknowns_excluded": true},
+    "blocking_conditions": [],
+    "unresolved_critical_design_flaws": [],
+    "unknowns": []
+  },
   "nodes":[
     {"id":"A-001","type":"asset","criticality":"CRITICAL"},
     {"id":"T-001","type":"threat","criticality":"CRITICAL"},

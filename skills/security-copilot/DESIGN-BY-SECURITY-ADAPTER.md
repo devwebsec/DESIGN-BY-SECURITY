@@ -28,7 +28,7 @@ The architecture layer should provide, where applicable:
 - residual risks;
 - required telemetry and detection points;
 - containment/recovery capabilities;
-- security-gate decision.
+- security-gate decision and review outcome.
 
 ## Operational context
 
@@ -95,6 +95,7 @@ OBSERVATION
 5. Do not approve a critical unresolved design flaw merely because compensating detection exists.
 6. Preserve uncertainty and evidence boundaries.
 7. Destructive operational actions remain subject to human authorization.
+8. A critical unresolved design flaw routes as `decision=FAIL` and `review_outcome=REDESIGN_REQUIRED`.
 
 ## Lifecycle
 
@@ -110,4 +111,3 @@ DESIGN
        |
        +---- Security Copilot operational findings
 ```
-
