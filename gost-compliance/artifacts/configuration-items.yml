@@ -1,3 +1,14 @@
-version: "1.0"
-items: []
+version: "2.0"
+standard: "GOST R 56939-2024"
+process: "5.4"
+status: "implementation-overlay"
+required_record_fields:
+  - configuration_items
+  - unique_identification
+  - change_control
+  - version_traceability
+configuration_items: []
+unique_identification: []
+change_control: []
+version_traceability: []
 # id, owner, version, baseline, change_ref, validation
