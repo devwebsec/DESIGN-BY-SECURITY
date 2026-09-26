@@ -1,3 +1,17 @@
-version: "1.0"
+version: "2.0"
+standard: "GOST R 56939-2024"
+process: "5.25"
+status: "implementation-overlay"
+required_record_fields:
+  - decommission_regulation
+  - end_of_support
+  - user_notification
+  - roles
+  - conditions
+decommission_regulation: "record approved decommissioning regulation"
+end_of_support: []
+user_notification: []
+roles: []
+conditions: []
 plans: []
 # asset, owner, access_revocation, data_disposition, dependency_cleanup, validation, approval
