@@ -1,0 +1,17 @@
+version: "1.0"
+standard: "GOST R 56939-2024"
+process: "5.6"
+status: "implementation-overlay"
+required_record_fields:
+  - architecture_version
+  - components
+  - interfaces
+  - security_decisions
+  - review_record
+  - change_reason
+architecture_version: "record version"
+components: []
+interfaces: []
+security_decisions: []
+review_record: "record review evidence"
+change_reason: "record reason for architecture update"
