@@ -1,6 +1,7 @@
-# 5.14 Dependency Management
+# 5.14 Управление доступом и контроль целостности кода при разработке ПО
 
-Inventory and assess third-party dependencies, versions, provenance and known security issues.
+Цель: обеспечить управление доступом к исходному коду и его целостность.
 
-Evidence: dependency inventory, SCA results and update/exception records.
-Gate: critical dependency exposure without disposition → hard fail.
+Минимальный контроль: утвержденный регламент доступа, модель управления доступом, привилегированные учётные записи, контроль целостности и аудит.
+
+Evidence: `gost-compliance/artifacts/source-code-access.yml`.
