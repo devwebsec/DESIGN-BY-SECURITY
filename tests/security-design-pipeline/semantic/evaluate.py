@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Deterministic semantic validator for normalized Design-by-Security artifacts."""
 from __future__ import annotations
-import json, sys
+
+import json
+import sys
 from pathlib import Path
 
 REQUIRED = [
@@ -9,6 +11,11 @@ REQUIRED = [
     "security_requirements", "controls", "detections", "validations",
     "security_gate", "operational_handoff", "lessons_learned", "redesign",
 ]
+
+ALLOWED_DECISIONS = {"PASS", "FAIL", "CONDITIONAL"}
+ALLOWED_REVIEW_OUTCOMES = {
+    "APPROVE", "APPROVE_WITH_CONDITIONS", "REDESIGN_REQUIRED", "DO_NOT_APPROVE",
+}
 
 
 def fail(msg: str) -> None:
@@ -54,8 +61,15 @@ def evidence_items(raw):
     fail("evidence must be an array or an object containing items")
 
 
-def evaluate(path: Path) -> None:
-    d = load(path)
+def evaluate(source: Path | dict) -> None:
+    """Validate a semantic artifact from a JSON path or an already-loaded object."""
+    d = load(source) if isinstance(source, Path) else source
+    if not isinstance(d, dict):
+        fail("root must be an object")
+    for key in REQUIRED:
+        if key not in d:
+            fail(f"missing artifact: {key}")
+
     assets = ids(d["assets"], "assets")
     threats = ids(d["threats"], "threats")
     paths = ids(d["attack_paths"], "attack_paths")
@@ -123,12 +137,42 @@ def evaluate(path: Path) -> None:
         fail("destructive_action_without_human_approval")
 
     gate = d["security_gate"]
-    if str(gate.get("decision", "")).upper() != "PASS":
-        fail("unresolved_critical_design_flaw: security_gate is not PASS")
+    if not isinstance(gate, dict):
+        fail("security_gate_must_be_object")
+
+    decision = str(gate.get("decision", "")).upper()
+    if decision not in ALLOWED_DECISIONS:
+        fail(f"invalid_security_gate_decision: {decision!r}")
+
+    review = str(gate.get("review_outcome", "")).upper()
+    if review and review not in ALLOWED_REVIEW_OUTCOMES:
+        fail(f"invalid_review_outcome: {review!r}")
+
+    # Machine gate rules.
+    if decision == "FAIL" and review in {"APPROVE", "APPROVE_WITH_CONDITIONS"}:
+        fail(f"review_outcome_conflict: decision=FAIL cannot have review_outcome={review}")
+
+    if decision == "FAIL" and not gate.get("unresolved_critical_design_flaws"):
+        fail("unresolved_critical_design_flaw: decision=FAIL without listed flaws")
+
     if gate.get("unresolved_critical_design_flaws"):
         fail("unresolved_critical_design_flaw: gate contains unresolved flaws")
+
     if gate.get("unknowns"):
         fail("unknown_presented_as_evidence: gate contains unresolved unknowns")
+
+    # Human review rules.
+    if review == "APPROVE_WITH_CONDITIONS" and not gate.get("residual_risk"):
+        fail("approve_with_conditions_without_residual_risk")
+
+    if review and review != "APPROVE" and not (
+        gate.get("blocking_conditions") or gate.get("residual_risk")
+    ):
+        fail(f"non_approve_without_conditions: review_outcome={review}")
+
+    # Evidence boundary — always required.
+    if not gate.get("evidence_boundary"):
+        fail("security_gate_missing_evidence_boundary")
 
     for e in evidence_items(d.get("evidence")):
         if not isinstance(e, dict) or not e.get("source"):
